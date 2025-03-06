@@ -26,8 +26,8 @@ template<int d> using make_arg_t = std::conditional_t<rdim<d>, size_t, std::null
 }
 
 namespace detail {
-template<typename T> concept tile = ducks::st::all<T> || ducks::rt::all<T> || ducks::cst::all<T> || ducks::crt::all<T>;
-template<typename T> concept vec  = ducks::sv::all<T> || ducks::rv::all<T> || ducks::csv::all<T> || ducks::crv::all<T>;
+// template<typename T> concept tile = ducks::st::all<T> || ducks::rt::all<T> || ducks::cst::all<T> || ducks::crt::all<T>;
+// template<typename T> concept vec  = ducks::sv::all<T> || ducks::rv::all<T> || ducks::csv::all<T> || ducks::crv::all<T>;
 }
 
 namespace ducks {
@@ -38,7 +38,7 @@ struct identifier {};
 template<typename _T=ducks::default_type> struct coord { // essentially a named int4 for tensor coordinates.
     using identifier = ducks::coord::identifier;
     using BASE = _T; // in units of what type?
-    static_assert(std::is_same_v<BASE, ducks::default_type> || detail::tile<BASE> || detail::vec<BASE>); // ensure BASE is a valid type
+    // static_assert(std::is_same_v<BASE, ducks::default_type> || detail::tile<BASE> || detail::vec<BASE>); // ensure BASE is a valid type
     int b, d, r, c;
     __device__ inline coord(int _b, int _d, int _r, int _c) : b(_b), d(_d), r(_r), c(_c) {}
     __device__ inline coord(        int _d, int _r, int _c) : b( 0), d(_d), r(_r), c(_c) {}

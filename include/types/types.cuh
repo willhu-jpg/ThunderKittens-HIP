@@ -5,8 +5,8 @@
 
 #pragma once
 
-#include "register/register.cuh"
-#include "shared/shared.cuh"
+// #include "register/register.cuh"
+// #include "shared/shared.cuh"
 #include "global/global.cuh"
 
 /* ----------  WRAPPERS FOR PRETTINESS  ---------- */
