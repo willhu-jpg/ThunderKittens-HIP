@@ -96,8 +96,8 @@ concept col_layout = all<T> && std::is_same_v<typename T::layout, ducks::rt_layo
 }
 
 template<int _rows, int _cols, ducks::rt_layout::all layout=ducks::rt_layout::row> using crt_fl = crt<float, _rows, _cols, layout>;
-template<int _rows, int _cols, ducks::rt_layout::all layout=ducks::rt_layout::row> using crt_bf = crt<bf16, _rows, _cols, layout>;
-template<int _rows, int _cols, ducks::rt_layout::all layout=ducks::rt_layout::row> using crt_hf = crt<half, _rows, _cols, layout>;
+// template<int _rows, int _cols, ducks::rt_layout::all layout=ducks::rt_layout::row> using crt_bf = crt<bf16, _rows, _cols, layout>;
+// template<int _rows, int _cols, ducks::rt_layout::all layout=ducks::rt_layout::row> using crt_hf = crt<half, _rows, _cols, layout>;
 
 
 

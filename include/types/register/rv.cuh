@@ -48,7 +48,7 @@ struct identifier {};
 template<typename _T, size_t _length, ducks::rv_layout::all _layout=ducks::rv_layout::naive>
 struct rv {
     using identifier = ducks::rv::identifier; ///< Type identifier for the rv structure.
-    static_assert(kittens::ducks::base_types::T1<_T>); // confirm it's a supported type
+    // static_assert(kittens::ducks::base_types::T1<_T>); // confirm it's a supported type
     using layout = _layout;
     static constexpr bool is_naive = std::is_same_v<layout, ducks::rv_layout::naive>;
     using T = kittens::base_types::packing<_T>::unpacked_type;
@@ -97,7 +97,7 @@ template<typename T> concept tile_layout  = align_layout<T> || ortho_layout<T>; 
 } // namespace ducks
 
 template<int _l, ducks::rv_layout::all layout=ducks::rv_layout::naive> using rv_fl = rv<float, _l, layout>;
-template<int _l, ducks::rv_layout::all layout=ducks::rv_layout::naive> using rv_bf = rv<bf16,  _l, layout>;
-template<int _l, ducks::rv_layout::all layout=ducks::rv_layout::naive> using rv_hf = rv<half,  _l, layout>;
+// template<int _l, ducks::rv_layout::all layout=ducks::rv_layout::naive> using rv_bf = rv<bf16,  _l, layout>;
+// template<int _l, ducks::rv_layout::all layout=ducks::rv_layout::naive> using rv_hf = rv<half,  _l, layout>;
 
 } // namespace kittens

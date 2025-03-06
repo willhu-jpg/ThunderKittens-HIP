@@ -95,8 +95,8 @@ concept all = requires {
 /* ----------  WRAPPERS FOR PRETTINESS  ---------- */
 
 // vector types
-template<size_t _length> using sv_bf = sv<bf16,  _length>;
-template<size_t _length> using sv_hf = sv<half,  _length>;
+// template<size_t _length> using sv_bf = sv<bf16,  _length>;
+// template<size_t _length> using sv_hf = sv<half,  _length>;
 template<size_t _length> using sv_fl = sv<float, _length>;
 
 } // namespace kittens

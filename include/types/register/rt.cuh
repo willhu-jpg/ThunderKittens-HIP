@@ -55,7 +55,7 @@ template<typename _T, int _rows, int _cols, ducks::rt_layout::all _layout=ducks:
 struct rt {
     using identifier = ducks::rt::identifier; ///< Type identifier for the rt structure.
     using layout = _layout; ///< Layout of the matrix tile.
-    static_assert(kittens::ducks::base_types::T1<_T>); // confirm it's a supported type
+    // static_assert(kittens::ducks::base_types::T1<_T>); // confirm it's a supported type
     using T = kittens::base_types::packing<_T>::unpacked_type;
     using T2 = kittens::base_types::packing<_T>::packed_type;
     using dtype = T2; ///< Data type of the matrix elements
@@ -123,8 +123,8 @@ concept col_layout = all<T> && std::is_same_v<typename T::layout, ducks::rt_layo
 // layout and type wrappers
 
 template<int _r, int _c, ducks::rt_layout::all layout=ducks::rt_layout::row> using rt_fl = rt<float, _r, _c, layout>;
-template<int _r, int _c, ducks::rt_layout::all layout=ducks::rt_layout::row> using rt_bf = rt<bf16,  _r, _c, layout>;
-template<int _r, int _c, ducks::rt_layout::all layout=ducks::rt_layout::row> using rt_hf = rt<half,  _r, _c, layout>;
+// template<int _r, int _c, ducks::rt_layout::all layout=ducks::rt_layout::row> using rt_bf = rt<bf16,  _r, _c, layout>;
+// template<int _r, int _c, ducks::rt_layout::all layout=ducks::rt_layout::row> using rt_hf = rt<half,  _r, _c, layout>;
 #ifdef KITTENS_HOPPER
 template<int _r, int _c, ducks::rt_layout::all layout=ducks::rt_layout::row> using rt_fl8_e4m3 = rt<fp8e4m3,  _r, _c, layout>;
 template<int _r, int _c, ducks::rt_layout::all layout=ducks::rt_layout::row> using rt_fl8_e5m2 = rt<fp8e5m2,  _r, _c, layout>;

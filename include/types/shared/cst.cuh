@@ -81,8 +81,8 @@ template <typename T> concept all = requires {
 
 /* ----------  WRAPPERS FOR PRETTINESS  ---------- */
 
-template<int _rows, int _cols> using cst_bf = cst<bf16,  _rows, _cols>;
-template<int _rows, int _cols> using cst_hf = cst<half,  _rows, _cols>;
+// template<int _rows, int _cols> using cst_bf = cst<bf16,  _rows, _cols>;
+// template<int _rows, int _cols> using cst_hf = cst<half,  _rows, _cols>;
 template<int _rows, int _cols> using cst_fl = cst<float, _rows, _cols>;
 
 
