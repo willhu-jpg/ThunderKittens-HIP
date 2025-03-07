@@ -21,6 +21,10 @@ int main(int argc, char **argv) {
         for(int i = 0; i < TOTAL_ELEMENTS_X; i++) {   infile >> x[i];    }
         for(int i = 0; i < TOTAL_ELEMENTS_O; i++) {   infile >> o_ref[i];  }
         std::cout << "Finished loading file from " << argv[1] << "!" << std::endl;
+    } else {
+        for (int i = 0; i < TOTAL_ELEMENTS_X; i++) { x[i] = 1.5f; }
+        for (int i = 0; i < TOTAL_ELEMENTS_O; i++) { o_ref[i] = 3.0f; }
+        std::cout << "Finished setting default values" << std::endl;
     }
 
     // set the inputs
