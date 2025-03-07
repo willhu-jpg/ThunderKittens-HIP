@@ -29,10 +29,10 @@ __device__ static inline void load(ST &dst, const GL &src, const COORD &idx) {
     constexpr int total_calls = (total_rows * kittens::TILE_ROW_DIM<T>*kittens::TILE_COL_DIM<T> + N_THREADS*elem_per_memcpy-1) / (N_THREADS*elem_per_memcpy); // round up
 
 
-    coord<> unit_coord = idx.template unit_coord<axis, 3>();
-    typename GL::dtype *src_ptr = (typename GL::dtype*)&src[unit_coord];
+    // coord<> unit_coord = idx.template unit_coord<axis, 3>();
+    // typename GL::dtype *src_ptr = (typename GL::dtype*)&src[unit_coord];
     // uint32_t dst_ptr = static_cast<uint32_t>(__cvta_generic_to_shared(&dst.data[0]));
-    uint32_t dst_ptr = reinterpret_cast<uintptr_t>(&dst.data[0]);
+    // uint32_t dst_ptr = reinterpret_cast<uintptr_t>(&dst.data[0]);
     int laneid = threadIdx.x % N_THREADS;
 
     #pragma unroll
@@ -43,23 +43,25 @@ __device__ static inline void load(ST &dst, const GL &src, const COORD &idx) {
         int row = load_idx / memcpy_per_row;
         int col = (load_idx*elem_per_memcpy) % dst.cols;
 
-        if constexpr (assume_aligned) {
-            float4 tmp;
-            move<float4>::ldg(tmp, (float4*)&src_ptr[row*row_stride + col]);
-            move<float4>::sts(dst.idx(dst_ptr, {row, col}), tmp);
-        }
-        else {
-            if (row + unit_coord.template dim<axis>() < src.template shape<axis>()) {
-                float4 tmp;
-                move<float4>::ldg(tmp, (float4*)&src_ptr[row*row_stride + col]);
-                move<float4>::sts(dst.idx(dst_ptr, {row, col}), tmp);
-            }
-            else {
-                // printf("thread %d skipping load on row %d, col %d\n", threadIdx.x, row + unit_coord.template dim<axis>(), col);
-                float4 zeros = {0.f,0.f,0.f,0.f};
-                move<float4>::sts(dst.idx(dst_ptr, {row, col}), zeros); // use the default value
-            }
-        }
+         *(float2*)(&dst[{row, col}]) = *(float2*)(&src[row*row_stride + col]);
+
+        // if constexpr (assume_aligned) {
+        //     float4 tmp;
+        //     move<float4>::ldg(tmp, (float4*)&src_ptr[row*row_stride + col]);
+        //     move<float4>::sts(dst.idx(dst_ptr, {row, col}), tmp);
+        // }
+        // else {
+        //     if (row + unit_coord.template dim<axis>() < src.template shape<axis>()) {
+        //         float4 tmp;
+        //         move<float4>::ldg(tmp, (float4*)&src_ptr[row*row_stride + col]);
+        //         move<float4>::sts(dst.idx(dst_ptr, {row, col}), tmp);
+        //     }
+        //     else {
+        //         // printf("thread %d skipping load on row %d, col %d\n", threadIdx.x, row + unit_coord.template dim<axis>(), col);
+        //         float4 zeros = {0.f,0.f,0.f,0.f};
+        //         move<float4>::sts(dst.idx(dst_ptr, {row, col}), zeros); // use the default value
+        //     }
+        // }
     }
 }
 template<ducks::st::all ST, ducks::gl::all GL, ducks::coord::tile COORD=coord<ST>>
@@ -85,10 +87,10 @@ __device__ static inline void store(const GL &dst, const ST &src, const COORD &i
     constexpr int total_rows = ST::height*ST::width;
     constexpr int total_calls = (total_rows * kittens::TILE_ROW_DIM<T>*kittens::TILE_COL_DIM<T> + N_THREADS*elem_per_memcpy-1) / (N_THREADS*elem_per_memcpy); // round up
 
-    coord<> unit_coord = idx.template unit_coord<axis, 3>();
-    typename GL::dtype *dst_ptr = (typename GL::dtype*)&dst[unit_coord];
+    // coord<> unit_coord = idx.template unit_coord<axis, 3>();
+    // typename GL::dtype *dst_ptr = (typename GL::dtype*)&dst[unit_coord];
     // uint32_t src_ptr = static_cast<uint32_t>(__cvta_generic_to_shared(&src.data[0]));
-    uint32_t src_ptr = reinterpret_cast<uintptr_t>(&src.data[0]);
+    // uint32_t src_ptr = reinterpret_cast<uintptr_t>(&src.data[0]);
     int laneid = threadIdx.x % N_THREADS;
 
     #pragma unroll
@@ -99,21 +101,23 @@ __device__ static inline void store(const GL &dst, const ST &src, const COORD &i
         int row = load_idx / memcpy_per_row;
         int col = (load_idx*elem_per_memcpy) % src.cols;
 
-        if constexpr (assume_aligned) {
-            float4 tmp;
-            move<float4>::lds(tmp, src.idx(src_ptr, {row, col}));
-            move<float4>::stg((float4*)&dst_ptr[row*row_stride + col], tmp);
-        }
-        else {
-            if (row + unit_coord.template dim<axis>() < dst.template shape<axis>()) {
-                float4 tmp;
-                move<float4>::lds(tmp, src.idx(src_ptr, {row, col}));
-                move<float4>::stg((float4*)&dst_ptr[row*row_stride + col], tmp);
-            }
-            else {
-                // printf("thread %d skipping store on row %d, col %d\n", threadIdx.x, row + unit_coord.template dim<axis>(), col);
-            }
-        }
+         *(float2*)(&dst[row*row_stride + col]) = *(float2*)(&src[{row, col}]);
+
+        // if constexpr (assume_aligned) {
+        //     float4 tmp;
+        //     move<float4>::lds(tmp, src.idx(src_ptr, {row, col}));
+        //     move<float4>::stg((float4*)&dst_ptr[row*row_stride + col], tmp);
+        // }
+        // else {
+        //     if (row + unit_coord.template dim<axis>() < dst.template shape<axis>()) {
+        //         float4 tmp;
+        //         move<float4>::lds(tmp, src.idx(src_ptr, {row, col}));
+        //         move<float4>::stg((float4*)&dst_ptr[row*row_stride + col], tmp);
+        //     }
+        //     else {
+        //         // printf("thread %d skipping store on row %d, col %d\n", threadIdx.x, row + unit_coord.template dim<axis>(), col);
+        //     }
+        // }
     }
 }
 template<ducks::st::all ST, ducks::gl::all GL, ducks::coord::tile COORD=coord<ST>>

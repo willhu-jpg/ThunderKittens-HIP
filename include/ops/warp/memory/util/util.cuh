@@ -47,7 +47,7 @@ template<typename T> struct move {
 //         asm volatile("st.global.b16 [%1], %0;\n" : : "h"(*(uint16_t*)&src), "l"(dst));
 //     }
 // };
-template<> struct move<float> {
+// template<> struct move<float> {
     // __device__ static inline void lds(float& dst, uint32_t src) {
     //     asm volatile("ld.shared.f32 %0, [%1];\n" : "=f"(dst) : "r"(src));
     // }
@@ -60,19 +60,7 @@ template<> struct move<float> {
     // __device__ static inline void stg(float* dst, const float& src) {
     //     asm volatile("st.global.f32 [%1], %0;\n" : : "f"(src), "l"(dst));
     // }
-    __device__ static inline void lds(float& dst, uint32_t src) {
-        dst = __builtin_amdgcn_s_load_dword(reinterpret_cast<const float*>(src), 0);
-    }
-    __device__ static inline void sts(uint32_t dst, const float& src) {
-        __builtin_amdgcn_s_store_dword(reinterpret_cast<float*>(dst), src, 0);
-    }
-    __device__ static inline void ldg(float& dst, float* src) {
-        dst = __builtin_amdgcn_raw_buffer_load_f32(src, 0);
-    }
-    __device__ static inline void stg(float* dst, const float& src) {
-        __builtin_amdgcn_raw_buffer_store_f32(src, dst, 0, 0, 0);
-    }
-};
+// };
 // packed types
 // template<> struct move<bf16_2> {
 //     __device__ static inline void lds(bf16_2& dst, uint32_t src) {
