@@ -5,27 +5,29 @@
 #include <fstream>
 #include <random>
 #include <type_traits>
+#include <hip/hip_runtime.h>
+#include <hip/hip_bfloat16.h>
 #include "kittens.cuh"
 
-/* --------------------  CUDA ERROR UTILS  -------------------- */
+/* --------------------  hip ERROR UTILS  -------------------- */
 
 #include <stdio.h>
-#define CudaCheckError()    __cudaCheckError( __FILE__, __LINE__ )
-inline void __cudaCheckError( const char *file, const int line ) {
-    cudaError err = cudaGetLastError();
-    if ( cudaSuccess != err )
+#define HipCheckError()    __hipCheckError( __FILE__, __LINE__ )
+inline void __hipCheckError( const char *file, const int line ) {
+    hipError_t err = hipGetLastError();
+    if ( hipSuccess != err )
     {
-        fprintf( stderr, "cudaCheckError() failed at %s:%i : %s\n",
-                 file, line, cudaGetErrorString( err ) );
+        fprintf( stderr, "hipCheckError() failed at %s:%i : %s\n",
+                 file, line, hipGetErrorString( err ) );
         exit( -1 );
     }
     // More careful checking. However, this will affect performance.
     // Comment away if needed.
-    err = cudaDeviceSynchronize();
-    if( cudaSuccess != err )
+    err = hipDeviceSynchronize();
+    if( hipSuccess != err )
     {
-        fprintf( stderr, "cudaCheckError() with sync failed at %s:%i : %s\n",
-                 file, line, cudaGetErrorString( err ) );
+        fprintf( stderr, "hipCheckError() with sync failed at %s:%i : %s\n",
+                 file, line, hipGetErrorString( err ) );
         exit( -1 );
     }
 }
@@ -118,8 +120,8 @@ void initialize(T **d_i, T **d_o, std::vector<float> &i_ref, std::vector<float> 
             f = i_ref[idx];
         }
         if constexpr (std::is_same_v<T, bf16>) {
-            i_t[idx] = __float2bfloat16(f); // fill in for transfer to device
-            i_ref[idx] = __bfloat162float(i_t[idx]); // ensure lossiness of fp16 is captured on cpu
+            i_t[idx] = hip_bfloat16(f); // fill in for transfer to device
+            i_ref[idx] = static_cast<float>(i_t[idx]); // ensure lossiness of fp16 is captured on cpu
         }
         else if constexpr (std::is_same_v<T, float>) {
             i_t[idx] = f;
@@ -129,27 +131,17 @@ void initialize(T **d_i, T **d_o, std::vector<float> &i_ref, std::vector<float> 
             i_t[idx] = __float2half(f);
             i_ref[idx] = __half2float(i_t[idx]);
         }
-        #ifdef KITTENS_HOPPER
-        else if constexpr (std::is_same_v<T, fp8e4m3>) {
-            i_t[idx] = __nv_fp8_e4m3(f); 
-            i_ref[idx] = float(i_t[idx]); 
-        } 
-        else if constexpr (std::is_same_v<T, fp8e5m2>) {
-            i_t[idx] = __nv_fp8_e5m2(f); 
-            i_ref[idx] = float(i_t[idx]); 
-        }
-        #endif
         else {
             assert(false && "Unsupported data type");
         }
     }
 
-    cudaMalloc(d_i, input_size  * sizeof(T));
-    cudaMalloc(d_o, output_size * sizeof(T));
-    CudaCheckError();
+    hipMalloc(d_i, input_size  * sizeof(T));
+    hipMalloc(d_o, output_size * sizeof(T));
+    HipCheckError();
 
-    cudaMemcpy(*d_i, i_t.data(), input_size * sizeof(T), cudaMemcpyHostToDevice);
-    CudaCheckError();
+    chipMemcpy(*d_i, i_t.data(), input_size * sizeof(T), hipMemcpyHostToDevice);
+    HipCheckError();
 }
 extern int should_write_outputs;
 template<typename T>
@@ -160,14 +152,14 @@ test_result validate(T *d_i, T *d_o, const std::vector<float> &i_ref, std::vecto
     // copy back
     T* o_t = new T[output_size];
     float *o = new float[output_size];
-    cudaDeviceSynchronize();
-    CudaCheckError();
-    cudaMemcpy(o_t, d_o, output_size * sizeof(T), cudaMemcpyDeviceToHost);
-    CudaCheckError();
+    hipDeviceSynchronize();
+    HipCheckError();
+    hipMemcpy(o_t, d_o, output_size * sizeof(T), hipMemcpyDeviceToHost);
+    HipCheckError();
     for(int idx = 0; idx < output_size; idx++) {
         if constexpr (std::is_same_v<T, bf16>) {
-            o[idx] = __bfloat162float(o_t[idx]);
-            o_ref[idx] = __bfloat162float(__float2bfloat16(o_ref[idx]));
+            o[idx] = static_cast<float>(o_t[idx]);
+            o_ref[idx] = static_cast<float>(hip_bfloat16(o_ref[idx]));
         }
         else if constexpr (std::is_same_v<T, half>) {
             o[idx] = __half2float(o_t[idx]);
@@ -177,16 +169,6 @@ test_result validate(T *d_i, T *d_o, const std::vector<float> &i_ref, std::vecto
             o[idx] = o_t[idx];
             o_ref[idx] = o_ref[idx];
         }
-        #ifdef KITTENS_HOPPER
-        else if constexpr(std::is_same_v<T, fp8e4m3>) {
-            o[idx] = float(o_t[idx]);
-            o_ref[idx] = float(__nv_fp8_e4m3(o_ref[idx])); 
-        }
-        else if constexpr(std::is_same_v<T, fp8e5m2>) {
-            o[idx] = float(o_t[idx]);
-            o_ref[idx] = float(__nv_fp8_e5m2(o_ref[idx])); 
-        }
-        #endif
         else {
             assert(false && "Unsupported data type");
         }
@@ -223,9 +205,9 @@ test_result validate(T *d_i, T *d_o, const std::vector<float> &i_ref, std::vecto
         reffile.close();
         outfile.close();
     }
-    cudaFree(d_i);
-    cudaFree(d_o);
+    hipFree(d_i);
+    hipFree(d_o);
     delete[] o_t, o;
-    CudaCheckError();
+    HipCheckError();
     return good ? test_result::PASSED : test_result::FAILED;
 }

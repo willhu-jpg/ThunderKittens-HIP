@@ -2,41 +2,44 @@
 # If you want to run lots of tests without parallel compilation, be prepared
 # to spend a *long* time compiling. (like, HOURS single-threaded.)
 
-# GPU Selection: Set to either 4090 or H100
-GPU_TARGET=H100
-COMP_LEVEL=fast
+# GPU Selection: Set to MI300X
+GPU_TARGET=CDNA3
+COMP_LEVEL=profile
 
-# Compiler
-NVCC?=nvcc
-NVCCFLAGS=-std=c++20 --expt-relaxed-constexpr -Itesting_commons -I../../include
+GPU_RUNTIME := HIP
+
+# HIP variables
+ROCM_INSTALL_DIR := /opt/rocm
+HIP_INCLUDE_DIR  := $(ROCM_INSTALL_DIR)/include/hip
+
+HIPCXX ?= $(ROCM_INSTALL_DIR)/bin/hipcc
+HIPFLAGS=-std=c++20 -I$(HIP_INCLUDE_DIR) -Itesting_commons -I../../include -Wall -Wextra
 
 # At what level to run tests?
 # Level 1 takes 15 seconds to compile 1,000 tests.
 # (Default) Level 2 takes a minute to compile 3,000 tests.
 # Level 3 takes 5 minutes to compile 10,000 tests.
 # Level 4 takes 15 while to compile 25,000 tests
-NVCCFLAGS+= -DTEST_INTENSITY=2
+HIPFLAGS+= -DTEST_INTENSITY=1
 # Which tests to run?
 # -DTEST_ALL means run all tests.
 # You can also specify subsections, e.g. -DTEST_WARP_MEMORY
 # Or individual tests, like -DTEST_WARP_MEMORY_VEC_DSMEM. Useful for debugging!
-NVCCFLAGS+= -DTEST_ALL
+HIPFLAGS+= -DTEST_WARP_MEMORY_TILE_DSMEM
 
-ifeq ($(COMP_LEVEL),fast)
-NVCCFLAGS+= -O0 --threads=0 -diag-suppress 20054
+ifeq ($(COMP_LEVEL),safe)
+HIPFLAGS+= -O0
 else ifeq ($(COMP_LEVEL),debug)
-NVCCFLAGS+= -g -G
+HIPFLAGS+= -g -G
 else ifeq ($(COMP_LEVEL),profile)
-NVCCFLAGS+= -O3 --threads=0 -diag-suppress 20054 --dlto
+HIPFLAGS+= -O3 -save-temps=obj
 endif
 
 # Compiler flags based on GPU target
-ifeq ($(GPU_TARGET),4090)
-NVCCFLAGS+= -arch=sm_89 -DKITTENS_4090
-else ifeq ($(GPU_TARGET),A100)
-NVCCFLAGS+= -arch=sm_80 -DKITTENS_A100
-else ifeq ($(GPU_TARGET),H100)
-NVCCFLAGS+= -arch=sm_90a -DKITTENS_HOPPER -lcuda -lcudart
+ifeq ($(GPU_TARGET),CDNA2)
+HIPFLAGS+= -DKITTENS_CDNA2 --offload-arch=gfx90a
+else ifeq ($(GPU_TARGET),CDNA3)
+HIPFLAGS+= -DKITTENS_CDNA3 --offload-arch=gfx942
 endif
 
 # Target binary name
@@ -59,11 +62,11 @@ build:
 # Rule to compile each CU file
 $(BUILD_DIR)/%.o: %.cu
 	mkdir -p $(@D)
-	$(NVCC) $(NVCCFLAGS) -c $< -o $@
+	$(HIPCXX) $(HIPFLAGS) -c $< -o $@
 
 # Link object files to create the final executable
 $(TARGET): $(OBJS)
-	$(NVCC) $(NVCCFLAGS) $^ -o $(TARGET)
+	$(HIPCXX) $(HIPFLAGS) $^ -o $(TARGET)
 
 # Run target
 run: all

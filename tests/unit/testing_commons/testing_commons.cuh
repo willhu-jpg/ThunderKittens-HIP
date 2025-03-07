@@ -9,9 +9,6 @@
  * but you shouldn't need to modify that testing_utils at all.
  */
 
-#include <cuda/pipeline>
-#include <cooperative_groups.h>
-
 #include "kittens.cuh"
 
 #include "testing_utils.cuh"

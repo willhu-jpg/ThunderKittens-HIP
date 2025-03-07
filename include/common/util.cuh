@@ -10,6 +10,12 @@
 #include <concepts>
 #include <memory>
 
+#include <hip/hip_runtime.h>
+
+#ifndef __forceinline__
+#define __forceinline__ __attribute__((always_inline))
+#endif
+
 /**
  * @namespace kittens
  *
