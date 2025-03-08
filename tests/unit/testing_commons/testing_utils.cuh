@@ -5,6 +5,8 @@
 #include <fstream>
 #include <random>
 #include <type_traits>
+// #include <hip/hip_runtime.h>
+// #include <hip/hip_bfloat16.h>
 #include "kittens.cuh"
 
 /* --------------------  hip ERROR UTILS  -------------------- */
