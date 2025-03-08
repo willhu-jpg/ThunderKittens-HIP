@@ -13,7 +13,7 @@ ROCM_INSTALL_DIR := /opt/rocm
 HIP_INCLUDE_DIR  := $(ROCM_INSTALL_DIR)/include/hip
 
 HIPCXX ?= $(ROCM_INSTALL_DIR)/bin/hipcc
-HIPFLAGS=-std=c++20 -I$(HIP_INCLUDE_DIR) -Itesting_commons -I../../include -Wall -Wextra
+HIPFLAGS=-std=c++20 -I$(HIP_INCLUDE_DIR) -Itesting_commons -I../../include -Wall -Wextra -Wl,--allow-multiple-definition
 
 # At what level to run tests?
 # Level 1 takes 15 seconds to compile 1,000 tests.
