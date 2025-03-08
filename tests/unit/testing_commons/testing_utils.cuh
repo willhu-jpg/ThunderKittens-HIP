@@ -5,9 +5,8 @@
 #include <fstream>
 #include <random>
 #include <type_traits>
-// #include <hip/hip_runtime.h>
-// #include <hip/hip_bfloat16.h>
 #include "kittens.cuh"
+#include <hip/hip_bfloat16.h>
 
 /* --------------------  hip ERROR UTILS  -------------------- */
 
@@ -120,7 +119,7 @@ void initialize(T **d_i, T **d_o, std::vector<float> &i_ref, std::vector<float> 
             f = i_ref[idx];
         }
         if constexpr (std::is_same_v<T, bf16>) {
-            i_t[idx] = __hip_bfloat16(f); // fill in for transfer to device
+            i_t[idx] = __float2bfloat16(f); // fill in for transfer to device
             i_ref[idx] = __bfloat162float(i_t[idx]); // ensure lossiness of fp16 is captured on cpu
         }
         else if constexpr (std::is_same_v<T, float>) {
@@ -159,7 +158,7 @@ test_result validate(T *d_i, T *d_o, const std::vector<float> &i_ref, std::vecto
     for(int idx = 0; idx < output_size; idx++) {
         if constexpr (std::is_same_v<T, bf16>) {
             o[idx] = __bfloat162float(o_t[idx]);
-            o_ref[idx] = __bfloat162float(__hip_bfloat16(o_ref[idx]));
+            o_ref[idx] = __bfloat162float(__float2bfloat16(o_ref[idx]));
         }
         else if constexpr (std::is_same_v<T, half>) {
             o[idx] = __half2float(o_t[idx]);
@@ -184,7 +183,7 @@ test_result validate(T *d_i, T *d_o, const std::vector<float> &i_ref, std::vecto
     }
     if(good) std::cout << " -- PASSED" << std::endl;
     else std::cout << " ----- ALERT! FAILED test `" << test_name << "` -----" << std::endl;
-    if(should_write_outputs && !good) {
+    if(should_write_outputs) {
         std::ofstream reffile("outputs/"+test_name+"_ref.txt");
         std::ofstream outfile("outputs/"+test_name+"_out.txt");
         for(int i = 0; i < output_size; i++) {
