@@ -177,7 +177,7 @@ template<> __device__ inline bf16   relu::op<bf16>  (const bf16 &x  ) { return _
 template<> __device__ inline bf16_2 relu::op<bf16_2>(const bf16_2 &x) { return __hmax2(x, base_types::constants<bf16_2>::zero()); }
 template<> __device__ inline half   relu::op<half>  (const half &x  ) { return __hmax(x, base_types::constants<half>::zero());    }
 template<> __device__ inline half_2 relu::op<half_2>(const half_2 &x) { return half2{__hmax(x.x, base_types::constants<half>::zero()), 
-                                                                                     __hmax(x.y,base_types::constants<half>::zero())}; }
+                                                                                     __hmax(x.y, base_types::constants<half>::zero())}; }
 /**
  * @brief Copy operation.
  *

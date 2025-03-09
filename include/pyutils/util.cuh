@@ -8,11 +8,11 @@ template <typename T>
 void check(T err, char const* const func, char const* const file,
            int const line)
 {
-    if (err != cudaSuccess)
+    if (err != hipSuccess)
     {
-        std::cerr << "CUDA Runtime Error at: " << file << ":" << line
+        std::cerr << "HIP Runtime Error at: " << file << ":" << line
                   << std::endl;
-        std::cerr << cudaGetErrorString(err) << " " << func << std::endl;
+        std::cerr << hipGetErrorString(err) << " " << func << std::endl;
         //std::exit(EXIT_FAILURE);
     }
 }

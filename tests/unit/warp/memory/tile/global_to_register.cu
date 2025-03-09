@@ -25,9 +25,9 @@ struct g2r_wrapper_2d {
             GL input (d_i, B, nullptr, 16*R*H, nullptr);
             GL output(d_o, B, nullptr, 16*R*H, nullptr);
             // run kernel
-            cudaFuncSetAttribute(
-                global_wrapper_2d<test, dtype, H, W, NUM_WORKERS, GL, args...>,
-                cudaFuncAttributeMaxDynamicSharedMemorySize,
+            hipFuncSetAttribute(
+                reinterpret_cast<void *>(global_wrapper_2d<test, dtype, H, W, NUM_WORKERS, GL, args...>),
+                hipFuncAttributeMaxDynamicSharedMemorySize,
                 kittens::MAX_SHARED_MEMORY
             );
             global_wrapper_2d<test, dtype, H, W, NUM_WORKERS, GL, args...><<<1, NUM_WORKERS*32, kittens::MAX_SHARED_MEMORY>>>(input, output);
