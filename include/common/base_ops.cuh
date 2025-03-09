@@ -7,7 +7,6 @@
 
 #include <limits>
 #include "base_types.cuh"
-#include <hip/hip_bf16.h>
 
 namespace kittens {
 
@@ -176,8 +175,9 @@ template<> __device__ inline float  relu::op<float> (const float &x ) { return m
 template<> __device__ inline float2 relu::op<float2>(const float2 &x) { return float2{max(x.x, 0.f), max(x.y, 0.f)};         }
 template<> __device__ inline bf16   relu::op<bf16>  (const bf16 &x  ) { return __hmax(x, base_types::constants<bf16>::zero());    }
 template<> __device__ inline bf16_2 relu::op<bf16_2>(const bf16_2 &x) { return __hmax2(x, base_types::constants<bf16_2>::zero()); }
-template<> __device__ inline half   relu::op<half>  (const half &x  ) { return max(x, base_types::constants<half>::zero());    }
-template<> __device__ inline half_2 relu::op<half_2>(const half_2 &x) { return half_2{max(x.x, base_types::constants<half>::zero()), max(x.y, base_types::constants<half>::zero())}; }
+template<> __device__ inline half   relu::op<half>  (const half &x  ) { return __hmax(x, base_types::constants<half>::zero());    }
+template<> __device__ inline half_2 relu::op<half_2>(const half_2 &x) { return half2{__hmax(x.x, base_types::constants<half>::zero()), 
+                                                                                     __hmax(x.y,base_types::constants<half>::zero())}; }
 /**
  * @brief Copy operation.
  *
@@ -292,11 +292,11 @@ template<> __device__ inline half_2 div::op<half_2>(const half_2 &a, const half_
  struct max {
     template<typename T> static __device__ inline T op(const T &a, const T &b) { return ::max(a, b); }
 };
-template<>  __device__ inline float2 max::op<float2>(const float2 &a, const float2 &b) { return float2{::max(a.x, b.x), ::max(a.y, b.y)}; }
-template<>  __device__ inline bf16   max::op<bf16>  (const bf16   &a, const bf16   &b) { return __hmax(a, b);                             }
-template<>  __device__ inline bf16_2 max::op<bf16_2>(const bf16_2 &a, const bf16_2 &b) { return __hmax2(a, b);                            }
-template<>  __device__ inline half   max::op<half>  (const half   &a, const half   &b) { return ::max(a, b);                             }
-template<>  __device__ inline half_2 max::op<half_2>(const half_2 &a, const half_2 &b) { return half_2{::max(a.x, b.x), ::max(a.y, b.y)};                            }
+template<>  __device__ inline float2 max::op<float2>(const float2 &a, const float2 &b) { return float2{::max(a.x, b.x), ::max(a.y, b.y)};  }
+template<>  __device__ inline bf16   max::op<bf16>  (const bf16   &a, const bf16   &b) { return __hmax(a, b);                              }
+template<>  __device__ inline bf16_2 max::op<bf16_2>(const bf16_2 &a, const bf16_2 &b) { return __hmax2(a, b);                             }
+template<>  __device__ inline half   max::op<half>  (const half   &a, const half   &b) { return __hmax(a, b);                              }
+template<>  __device__ inline half_2 max::op<half_2>(const half_2 &a, const half_2 &b) { return half2{__hmax(a.x, b.x), __hmax(a.y, b.y)}; }
 /**
  * @brief Minimum operation.
  *
@@ -310,11 +310,11 @@ template<>  __device__ inline half_2 max::op<half_2>(const half_2 &a, const half
 struct min {
     template<typename T> static __device__ inline T op(const T &a, const T &b) { return ::min(a, b); }
 };
-template<>  __device__ inline float2 min::op<float2>(const float2 &a, const float2 &b) { return float2{::min(a.x, b.x), ::min(a.y, b.y)}; }
-template<>  __device__ inline bf16   min::op<bf16>  (const bf16   &a, const bf16   &b) { return __hmin(a, b);                         }
-template<>  __device__ inline bf16_2 min::op<bf16_2>(const bf16_2 &a, const bf16_2 &b) { return __hmin2(a, b);                        }
-template<>  __device__ inline half   min::op<half>  (const half   &a, const half   &b) { return ::min(a, b);                         }
-template<>  __device__ inline half_2 min::op<half_2>(const half_2 &a, const half_2 &b) { return half_2{::min(a.x, b.x), ::min(a.y, b.y)};                        }
+template<>  __device__ inline float2 min::op<float2>(const float2 &a, const float2 &b) { return float2{::min(a.x, b.x), ::min(a.y, b.y)};   }
+template<>  __device__ inline bf16   min::op<bf16>  (const bf16   &a, const bf16   &b) { return __hmin(a, b);                               }
+template<>  __device__ inline bf16_2 min::op<bf16_2>(const bf16_2 &a, const bf16_2 &b) { return __hmin2(a, b);                              }
+template<>  __device__ inline half   min::op<half>  (const half   &a, const half   &b) { return __hmin(a, b);                               }
+template<>  __device__ inline half_2 min::op<half_2>(const half_2 &a, const half_2 &b) { return half2{__hmin(a.x, b.x), __hmin(a.y, b.y)};  }
 
 
 /* ----------  TERNARY OPS  ---------- */

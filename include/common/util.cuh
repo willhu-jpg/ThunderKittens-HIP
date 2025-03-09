@@ -12,6 +12,8 @@
 
 #include <hip/hip_runtime.h>
 
+#include "base_types.cuh"
+
 #ifndef __forceinline__
 #define __forceinline__ __attribute__((always_inline))
 #endif
@@ -133,6 +135,30 @@ __device__ inline float2 packed_shfl_down<float2>(uint32_t mask, const float2 &f
 template<typename T>
 __device__ static inline T packed_shfl(uint32_t mask, const T &f, int src) {
     return __shfl(f, src);
+}
+template<>
+__device__ inline bf16 packed_shfl(uint32_t mask, const bf16 &f, int src) {
+    float r = __shfl(base_types::convertor<float, bf16>::convert(f), src);
+    return base_types::convertor<bf16, float>::convert(r);
+}
+template<>
+__device__ inline bf16_2 packed_shfl(uint32_t mask, const bf16_2 &f, int src) {
+    float2 r;
+    r.x = __shfl(base_types::convertor<float, bf16>::convert(f.x), src);
+    r.y = __shfl(base_types::convertor<float, bf16>::convert(f.y), src);
+    return base_types::convertor<bf16_2, float2>::convert(r);
+}
+template<>
+__device__ inline half packed_shfl(uint32_t mask, const half &f, int src) {
+    float r = __shfl(base_types::convertor<float, half>::convert(f), src);
+    return base_types::convertor<half, float>::convert(r);
+}
+template<>
+__device__ inline half_2 packed_shfl(uint32_t mask, const half_2 &f, int src) {
+    float2 r;
+    r.x = __shfl(base_types::convertor<float, half>::convert(f.x), src);
+    r.y = __shfl(base_types::convertor<float, half>::convert(f.y), src);
+    return base_types::convertor<half_2, float2>::convert(r);
 }
 template<>
 __device__ inline float2 packed_shfl<float2>(uint32_t mask, const float2 &f, int src) {
