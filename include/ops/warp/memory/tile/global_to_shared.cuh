@@ -25,20 +25,14 @@ __device__ static inline void load(ST &dst, const GL &src, const COORD &idx) {
     // we can handle this many rows each time we run a memcpy_async
     constexpr int elem_per_memcpy = sizeof(float4)/sizeof(typename ST::dtype);
     constexpr int memcpy_per_row = ST::cols / elem_per_memcpy;
-    constexpr int total_rows = ST::height*ST::width;
-    constexpr int total_calls = (total_rows * kittens::TILE_ROW_DIM<T>*kittens::TILE_COL_DIM<T> + N_THREADS*elem_per_memcpy-1) / (N_THREADS*elem_per_memcpy); // round up
+    constexpr int total_calls = (ST::cols * ST::rows + N_THREADS*elem_per_memcpy-1) / (N_THREADS*elem_per_memcpy); // round up
 
-    // printf("row_stride: %d\n", row_stride); 
-    // printf("elem_per_memcpy: %d\n", elem_per_memcpy);
-    // printf("memcpy_per_row: %d\n", memcpy_per_row); 
-    // printf("total_rows: %d\n", total_rows); 
-    // printf("total_calls: %d\n", total_calls);  
-
-    // coord<> unit_coord = idx.template unit_coord<axis, 3>();
-    // typename GL::dtype *src_ptr = (typename GL::dtype*)&src[unit_coord];
+    coord<> unit_coord = idx.template unit_coord<axis, 3>();
+    typename GL::dtype *src_ptr = (typename GL::dtype*)&src[unit_coord];
     // uint32_t dst_ptr = static_cast<uint32_t>(__cvta_generic_to_shared(&dst.data[0]));
-    // uint32_t dst_ptr = reinterpret_cast<uintptr_t>(&dst.data[0]);
+    uint32_t dst_ptr = reinterpret_cast<uintptr_t>(&dst.data[0]);
     int laneid = threadIdx.x % N_THREADS;
+    // printf("laneid: %d\n", laneid);
 
     #pragma unroll
     for(int i = 0; i < total_calls; i++) {
@@ -46,9 +40,11 @@ __device__ static inline void load(ST &dst, const GL &src, const COORD &idx) {
         int load_idx = i * N_THREADS + laneid;
         
         int row = load_idx / memcpy_per_row;
+
         int col = (load_idx*elem_per_memcpy) % dst.cols;
 
-         *(float4*)(&dst[{row, col}]) = *(float4*)(&src[row*row_stride + col]);
+        // *(float4*)(&dst[{row, col}]) = *(float4*)(&src[row + col]);
+        *(float4*)(&dst[{row, col}]) = *(float4*)&src_ptr[row * row_stride + col];
 
         // if constexpr (assume_aligned) {
         //     float4 tmp;
@@ -92,10 +88,10 @@ __device__ static inline void store(const GL &dst, const ST &src, const COORD &i
     constexpr int total_rows = ST::height*ST::width;
     constexpr int total_calls = (total_rows * kittens::TILE_ROW_DIM<T>*kittens::TILE_COL_DIM<T> + N_THREADS*elem_per_memcpy-1) / (N_THREADS*elem_per_memcpy); // round up
 
-    // coord<> unit_coord = idx.template unit_coord<axis, 3>();
-    // typename GL::dtype *dst_ptr = (typename GL::dtype*)&dst[unit_coord];
+    coord<> unit_coord = idx.template unit_coord<axis, 3>();
+    typename GL::dtype *dst_ptr = (typename GL::dtype*)&dst[unit_coord];
     // uint32_t src_ptr = static_cast<uint32_t>(__cvta_generic_to_shared(&src.data[0]));
-    // uint32_t src_ptr = reinterpret_cast<uintptr_t>(&src.data[0]);
+    uint32_t src_ptr = reinterpret_cast<uintptr_t>(&src.data[0]);
     int laneid = threadIdx.x % N_THREADS;
 
     #pragma unroll
@@ -106,7 +102,8 @@ __device__ static inline void store(const GL &dst, const ST &src, const COORD &i
         int row = load_idx / memcpy_per_row;
         int col = (load_idx*elem_per_memcpy) % src.cols;
 
-         *(float4*)(&dst[row*row_stride + col]) = *(float4*)(&src[{row, col}]);
+        // *(float4*) &dst_ptr[row*row_stride + col] = *(float4*)src.idx(src_ptr, {row, col});
+        *(float4*) &dst_ptr[row * row_stride + col] = *(float4*)(&src[{row, col}]);
 
         // if constexpr (assume_aligned) {
         //     float4 tmp;

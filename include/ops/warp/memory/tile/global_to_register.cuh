@@ -43,7 +43,7 @@ __device__ inline static void load(RT &dst, const GL &src, const COORD &idx) {
             T2 transfers[2];
             transfers[0] = base_types::convertor<T2, U2>::convert(*(U2*)(&src_ptr[(row_0to3+0)*row_stride + col]));
             transfers[1] = base_types::convertor<T2, U2>::convert(*(U2*)(&src_ptr[(row_0to3+4)*row_stride + col]));
-            transfers[1-warphalf] = packed_shfl_sync(MASK_ALL, transfers[1-warphalf], laneid^16);
+            transfers[1-warphalf] = packed_shfl(MASK_ALL, transfers[1-warphalf], laneid^16);
             dst.tiles[i][j].data[0] = transfers[0];
             dst.tiles[i][j].data[2] = transfers[1];
         }
@@ -53,7 +53,7 @@ __device__ inline static void load(RT &dst, const GL &src, const COORD &idx) {
             T2 transfers[2];
             transfers[0] = base_types::convertor<T2, U2>::convert(*(U2*)(&src_ptr[(row_0to3+ 8)*row_stride + col]));
             transfers[1] = base_types::convertor<T2, U2>::convert(*(U2*)(&src_ptr[(row_0to3+12)*row_stride + col]));
-            transfers[1-warphalf] = packed_shfl_sync(MASK_ALL, transfers[1-warphalf], laneid^16);
+            transfers[1-warphalf] = packed_shfl(MASK_ALL, transfers[1-warphalf], laneid^16);
             dst.tiles[i][j].data[1] = transfers[0];
             dst.tiles[i][j].data[3] = transfers[1];
         }
@@ -150,7 +150,7 @@ __device__ inline static void store(const GL &dst, const RT &src, const COORD &i
             U2 transfers[2];
             transfers[0] = base_types::convertor<U2, T2>::convert(src.tiles[i][j].data[0]);
             transfers[1] = base_types::convertor<U2, T2>::convert(src.tiles[i][j].data[2]);
-            transfers[1-warphalf] = packed_shfl_sync(MASK_ALL, transfers[1-warphalf], laneid^16);
+            transfers[1-warphalf] = packed_shfl(MASK_ALL, transfers[1-warphalf], laneid^16);
             *(U2*)(&dst_ptr[(row_0to3+0)*row_stride + col]) = transfers[0];
             *(U2*)(&dst_ptr[(row_0to3+4)*row_stride + col]) = transfers[1];
         }
@@ -160,7 +160,7 @@ __device__ inline static void store(const GL &dst, const RT &src, const COORD &i
             U2 transfers[2];
             transfers[0] = base_types::convertor<U2, T2>::convert(src.tiles[i][j].data[1]);
             transfers[1] = base_types::convertor<U2, T2>::convert(src.tiles[i][j].data[3]);
-            transfers[1-warphalf] = packed_shfl_sync(MASK_ALL, transfers[1-warphalf], laneid^16);
+            transfers[1-warphalf] = packed_shfl(MASK_ALL, transfers[1-warphalf], laneid^16);
             *(U2*)(&dst_ptr[(row_0to3+ 8)*row_stride + col]) = transfers[0];
             *(U2*)(&dst_ptr[(row_0to3+12)*row_stride + col]) = transfers[1];
         }

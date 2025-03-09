@@ -71,7 +71,7 @@ constexpr int MAX_SHARED_MEMORY = 164000;
 #elif defined(KITTENS_4090)
 constexpr int MAX_SHARED_MEMORY = 100000;
 #elif defined(KITTENS_CDNA3)
-constexpr int MAX_SHARED_MEMORY = 65000;
+constexpr int MAX_SHARED_MEMORY = 65536;
 #endif
 
 /* ----------  TYPE HELPERS  ---------- */
@@ -113,13 +113,13 @@ static constexpr uint32_t MASK_ALL = 0xFFFFFFFF;
  */
 template<typename T>
 __device__ static inline T packed_shfl_down(uint32_t mask, const T &f, int delta) {
-    return __shfl_down(mask, f, delta);
+    return __shfl_down(f, delta);
 }
 template<>
 __device__ inline float2 packed_shfl_down<float2>(uint32_t mask, const float2 &f, int delta) {
     float2 r;
-    r.x = __shfl_down(mask, f.x, delta);
-    r.y = __shfl_down(mask, f.y, delta);
+    r.x = __shfl_down(f.x, delta);
+    r.y = __shfl_down(f.y, delta);
     return r;
 }
 /**
@@ -132,13 +132,13 @@ __device__ inline float2 packed_shfl_down<float2>(uint32_t mask, const float2 &f
  */
 template<typename T>
 __device__ static inline T packed_shfl(uint32_t mask, const T &f, int src) {
-    return __shfl(mask, f, src);
+    return __shfl(f, src);
 }
 template<>
 __device__ inline float2 packed_shfl<float2>(uint32_t mask, const float2 &f, int src) {
     float2 r;
-    r.x = __shfl(mask, f.x, src);
-    r.y = __shfl(mask, f.y, src);
+    r.x = __shfl(f.x, src);
+    r.y = __shfl(f.y, src);
     return r;
 }
 

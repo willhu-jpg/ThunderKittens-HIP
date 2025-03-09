@@ -37,7 +37,7 @@ __device__ inline static void load(RT &dst, const ST &src) {
     using U2 = base_types::packing<U >::packed_type;
 
     int laneid = kittens::laneid();
-    printf("laneid: %d\n", laneid);
+    // printf("laneid: %d\n", laneid);
     int row_offset, col_offset;
     if constexpr (std::is_same_v<typename RT::layout, ducks::rt_layout::row>) {
         row_offset = laneid%16;
@@ -47,15 +47,15 @@ __device__ inline static void load(RT &dst, const ST &src) {
         row_offset = 8*(laneid/16);
         col_offset = laneid%16;
     }
-    printf("(dst.height, dst.width): (%d, %d)\n", dst.height, dst.width);
+    // printf("(dst.height, dst.width): (%d, %d)\n", dst.height, dst.width);
     #pragma unroll
     for(int i = 0; i < dst.height; i++) {
         int row = i*dst.tile_size_row + row_offset;
         #pragma unroll
         for(int j = 0; j < dst.width; j++) {
             int col = j*dst.tile_size_col + col_offset;
-            printf("dst.tile_size_col: %d\n", dst.tile_size_col);
-            printf("(row, col): (%d, %d)\n", row, col);
+            // printf("dst.tile_size_col: %d\n", dst.tile_size_col);
+            // printf("(row, col): (%d, %d)\n", row, col);
             if constexpr (std::is_same_v<typename RT::layout, ducks::rt_layout::row>) { // handle the row-major layout
                 dst.tiles[i][j].data[0] = base_types::convertor<T2, U2>::convert(*(U2*)(&src[{row, col+0}]));
                 dst.tiles[i][j].data[1] = base_types::convertor<T2, U2>::convert(*(U2*)(&src[{row, col+2}]));

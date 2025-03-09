@@ -10,10 +10,6 @@
 
 #pragma once
 
-// #ifdef KITTENS_HOPPER
-// #include <hip_fp8.h>
-// #endif
-
 #include <hip_bf16.h>
 #include <hip_fp16.h>
 #include <string>

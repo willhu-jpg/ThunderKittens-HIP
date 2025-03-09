@@ -44,7 +44,7 @@ void warp::memory::tile::shared_to_register::tests(test_data &results) {
                          INTENSITY_3 ? 8  :
                          INTENSITY_4 ? 16 : -1;
 
-    // sweep_gmem_type_2d_warp<sharedreg_load_store, SIZE, SIZE, kittens::ducks::rt_layout::row>::run(results);
+    sweep_gmem_type_2d_warp<sharedreg_load_store, SIZE, SIZE, kittens::ducks::rt_layout::row>::run(results);
     sweep_gmem_type_2d_warp<sharedreg_load_store, SIZE, SIZE, kittens::ducks::rt_layout::col>::run(results);
 }
 
