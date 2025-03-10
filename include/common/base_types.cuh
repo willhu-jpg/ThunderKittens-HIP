@@ -327,7 +327,10 @@ template<> struct convertor<float2, half_2> {
 };
 template<> struct convertor<half_2, float2> {
     static __host__ __device__ inline half_2 convert(const float2 & u) {
-        return __float22half2_rn(u);
+        half_2 r;
+        r.x = __float2half(u.x);
+        r.y = __float2half(u.y);
+        return r;
     }
 };
 template<> struct convertor<bf16, half> {
