@@ -47,15 +47,15 @@ __device__ static inline void row_reduce(V &row_accum, const T &src, const V &sr
             }
         }
         dtype accum_packed;
-        accum_packed.x = op::template op<base_types::packing<dtype>::unpacked_type>(accum_top_row.x,    accum_top_row.y);
-        accum_packed.y = op::template op<base_types::packing<dtype>::unpacked_type>(accum_bottom_row.x, accum_bottom_row.y);
+        accum_packed.x = op::template op<typename base_types::packing<dtype>::unpacked_type>(accum_top_row.x,    accum_top_row.y);
+        accum_packed.y = op::template op<typename base_types::packing<dtype>::unpacked_type>(accum_bottom_row.x, accum_bottom_row.y);
 
         // Now we need to do a lil shuffle to make everyone happy.
 
-        accum_packed = op::template op<dtype>(accum_packed, packed_shfl_down_sync(MASK_ALL, accum_packed, 2));
-        accum_packed = op::template op<dtype>(accum_packed, packed_shfl_down_sync(MASK_ALL, accum_packed, 1));
+        accum_packed = op::template op<dtype>(accum_packed, packed_shfl_down(MASK_ALL, accum_packed, 2));
+        accum_packed = op::template op<dtype>(accum_packed, packed_shfl_down(MASK_ALL, accum_packed, 1));
 
-        accum_packed = packed_shfl_sync(MASK_ALL, accum_packed, leader);
+        accum_packed = packed_shfl(MASK_ALL, accum_packed, leader);
 
         if(reset) {
             row_accum[i][0] = accum_packed;
@@ -104,16 +104,16 @@ __device__ static inline void row_reduce(V &row_accum, const T &src, const V &sr
 
         // Now we need to do a lil shuffle to make everyone happy.
 
-        accum_top_rows = op::template op<dtype>(accum_top_rows, packed_shfl_down_sync(MASK_ALL, accum_top_rows, 16));
-        accum_top_rows = op::template op<dtype>(accum_top_rows, packed_shfl_down_sync(MASK_ALL, accum_top_rows, 8));
-        accum_top_rows = op::template op<dtype>(accum_top_rows, packed_shfl_down_sync(MASK_ALL, accum_top_rows, 4));
+        accum_top_rows = op::template op<dtype>(accum_top_rows, packed_shfl_down(MASK_ALL, accum_top_rows, 16));
+        accum_top_rows = op::template op<dtype>(accum_top_rows, packed_shfl_down(MASK_ALL, accum_top_rows, 8));
+        accum_top_rows = op::template op<dtype>(accum_top_rows, packed_shfl_down(MASK_ALL, accum_top_rows, 4));
 
-        accum_bottom_rows = op::template op<dtype>(accum_bottom_rows, packed_shfl_down_sync(MASK_ALL, accum_bottom_rows, 16));
-        accum_bottom_rows = op::template op<dtype>(accum_bottom_rows, packed_shfl_down_sync(MASK_ALL, accum_bottom_rows, 8));
-        accum_bottom_rows = op::template op<dtype>(accum_bottom_rows, packed_shfl_down_sync(MASK_ALL, accum_bottom_rows, 4));
+        accum_bottom_rows = op::template op<dtype>(accum_bottom_rows, packed_shfl_down(MASK_ALL, accum_bottom_rows, 16));
+        accum_bottom_rows = op::template op<dtype>(accum_bottom_rows, packed_shfl_down(MASK_ALL, accum_bottom_rows, 8));
+        accum_bottom_rows = op::template op<dtype>(accum_bottom_rows, packed_shfl_down(MASK_ALL, accum_bottom_rows, 4));
 
-        accum_top_rows    = packed_shfl_sync(MASK_ALL, accum_top_rows,    leader);
-        accum_bottom_rows = packed_shfl_sync(MASK_ALL, accum_bottom_rows, leader);
+        accum_top_rows    = packed_shfl(MASK_ALL, accum_top_rows,    leader);
+        accum_bottom_rows = packed_shfl(MASK_ALL, accum_bottom_rows, leader);
 
         if(reset) {
             row_accum[i][0] = accum_top_rows;
@@ -166,16 +166,16 @@ __device__ static inline void col_reduce(V &col_accum, const T &src, const V &sr
 
         // Now we need to do a lil shuffle to make everyone happy.
 
-        accum_left_cols = op::template op<dtype>(accum_left_cols, packed_shfl_down_sync(MASK_ALL, accum_left_cols, 16));
-        accum_left_cols = op::template op<dtype>(accum_left_cols, packed_shfl_down_sync(MASK_ALL, accum_left_cols, 8));
-        accum_left_cols = op::template op<dtype>(accum_left_cols, packed_shfl_down_sync(MASK_ALL, accum_left_cols, 4));
+        accum_left_cols = op::template op<dtype>(accum_left_cols, packed_shfl_down(MASK_ALL, accum_left_cols, 16));
+        accum_left_cols = op::template op<dtype>(accum_left_cols, packed_shfl_down(MASK_ALL, accum_left_cols, 8));
+        accum_left_cols = op::template op<dtype>(accum_left_cols, packed_shfl_down(MASK_ALL, accum_left_cols, 4));
 
-        accum_right_cols = op::template op<dtype>(accum_right_cols, packed_shfl_down_sync(MASK_ALL, accum_right_cols, 16));
-        accum_right_cols = op::template op<dtype>(accum_right_cols, packed_shfl_down_sync(MASK_ALL, accum_right_cols, 8));
-        accum_right_cols = op::template op<dtype>(accum_right_cols, packed_shfl_down_sync(MASK_ALL, accum_right_cols, 4));
+        accum_right_cols = op::template op<dtype>(accum_right_cols, packed_shfl_down(MASK_ALL, accum_right_cols, 16));
+        accum_right_cols = op::template op<dtype>(accum_right_cols, packed_shfl_down(MASK_ALL, accum_right_cols, 8));
+        accum_right_cols = op::template op<dtype>(accum_right_cols, packed_shfl_down(MASK_ALL, accum_right_cols, 4));
 
-        accum_left_cols  = packed_shfl_sync(MASK_ALL, accum_left_cols,  leader);
-        accum_right_cols = packed_shfl_sync(MASK_ALL, accum_right_cols, leader);
+        accum_left_cols  = packed_shfl(MASK_ALL, accum_left_cols,  leader);
+        accum_right_cols = packed_shfl(MASK_ALL, accum_right_cols, leader);
 
         if(reset) {
             col_accum[j][0] = accum_left_cols;
@@ -223,15 +223,15 @@ __device__ static inline void col_reduce(V &col_accum, const T &src, const V &sr
             }
         }
         dtype accum_packed;
-        accum_packed.x = op::template op<base_types::packing<dtype>::unpacked_type>(accum_left_col.x,  accum_left_col.y);
-        accum_packed.y = op::template op<base_types::packing<dtype>::unpacked_type>(accum_right_col.x, accum_right_col.y);
+        accum_packed.x = op::template op<typename base_types::packing<dtype>::unpacked_type>(accum_left_col.x,  accum_left_col.y);
+        accum_packed.y = op::template op<typename base_types::packing<dtype>::unpacked_type>(accum_right_col.x, accum_right_col.y);
 
         // Now we need to do a lil shuffle to make everyone happy.
 
-        accum_packed = op::template op<dtype>(accum_packed, packed_shfl_down_sync(MASK_ALL, accum_packed, 2));
-        accum_packed = op::template op<dtype>(accum_packed, packed_shfl_down_sync(MASK_ALL, accum_packed, 1));
+        accum_packed = op::template op<dtype>(accum_packed, packed_shfl_down(MASK_ALL, accum_packed, 2));
+        accum_packed = op::template op<dtype>(accum_packed, packed_shfl_down(MASK_ALL, accum_packed, 1));
 
-        accum_packed = packed_shfl_sync(MASK_ALL, accum_packed, leader);
+        accum_packed = packed_shfl(MASK_ALL, accum_packed, leader);
 
         if(reset) {
             col_accum[j][0] = accum_packed;

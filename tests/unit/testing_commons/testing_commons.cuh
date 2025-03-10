@@ -149,7 +149,7 @@ struct wrapper_1d {
             GL output(d_o, nullptr, nullptr, nullptr, nullptr);
             // run kernel
             hipFuncSetAttribute(
-                global_wrapper_1d<test, dtype, S, NUM_WORKERS, GL, args...>,
+                reinterpret_cast<void *>(global_wrapper_1d<test, dtype, S, NUM_WORKERS, GL, args...>),
                 hipFuncAttributeMaxDynamicSharedMemorySize,
                 kittens::MAX_SHARED_MEMORY
             );

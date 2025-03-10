@@ -25,9 +25,9 @@ struct transpose_wrapper_2d {
             GTL_I input (d_i, nullptr, nullptr, nullptr, nullptr);
             GTL_O output(d_o, nullptr, nullptr, nullptr, nullptr);
             // run kernel
-            cudaFuncSetAttribute(
-                transpose_global_wrapper_2d<test, kittens::bf16, H, W, NUM_WORKERS, GTL_I, GTL_O, args...>,
-                cudaFuncAttributeMaxDynamicSharedMemorySize,
+            hipFuncSetAttribute(
+                reinterpret_cast<void *>(transpose_global_wrapper_2d<test, kittens::bf16, H, W, NUM_WORKERS, GTL_I, GTL_O, args...>),
+                hipFuncAttributeMaxDynamicSharedMemorySize,
                 kittens::MAX_SHARED_MEMORY
             );
             transpose_global_wrapper_2d<test, kittens::bf16, H, W, NUM_WORKERS, GTL_I, GTL_O, args...><<<1, NUM_WORKERS*32, kittens::MAX_SHARED_MEMORY>>>(input, output);
