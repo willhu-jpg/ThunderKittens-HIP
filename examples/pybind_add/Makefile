@@ -1,8 +1,9 @@
 # Compiler
 GPU=MI300
 
-TARGET=example_bind
-SRC=example_bind.cu
+TARGET=simple_tk
+SRC=example_add.hip
+
 
 # ROCM 
 COMMON_INCLUDE_DIR := ../../Common

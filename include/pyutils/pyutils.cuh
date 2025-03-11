@@ -56,7 +56,7 @@ template<auto kernel, typename TGlobal> static void bind_kernel(auto m, auto nam
         TGlobal __g__ {from_object<typename trait<decltype(member_ptrs)>::member_type>::make(args)...};
         if constexpr (has_dynamic_shared_memory<TGlobal>) {
             int __dynamic_shared_memory__ = (int)__g__.dynamic_shared_memory();
-            cudaFuncSetAttribute(kernel, cudaFuncAttributeMaxDynamicSharedMemorySize, __dynamic_shared_memory__);
+            hipFuncSetAttribute((void *) kernel, hipFuncAttributeMaxDynamicSharedMemorySize, __dynamic_shared_memory__);
             kernel<<<__g__.grid(), __g__.block(), __dynamic_shared_memory__>>>(__g__);
         } else {
             kernel<<<__g__.grid(), __g__.block()>>>(__g__);

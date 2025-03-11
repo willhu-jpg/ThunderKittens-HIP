@@ -8,9 +8,10 @@ struct globals {
     dim3 grid()  { return dim3(in.batch, in.depth, in.rows); }
     dim3 block() { return dim3(in.cols); }
 };
-__global__ void copy_kernel(const __grid_constant__ globals g) {
+__global__ void copy_kernel(const globals g) {
     if(threadIdx.x == 0 && blockIdx.x == 0 && blockIdx.y == 0 && blockIdx.z == 0) printf("Hello, from inside the kernel!\n");
-    g.out[{blockIdx.x, blockIdx.y, blockIdx.z, threadIdx.x}] = g.in[{blockIdx.x, blockIdx.y, blockIdx.z, threadIdx.x}];
+    g.out[{static_cast<int>(blockIdx.x), static_cast<int>(blockIdx.y), static_cast<int>(blockIdx.z), static_cast<int>(threadIdx.x)}] = 
+        g.in[{static_cast<int>(blockIdx.x), static_cast<int>(blockIdx.y), static_cast<int>(blockIdx.z), static_cast<int>(threadIdx.x)}];
 }
 void run_copy_kernel(globals g) {
     printf("I am calling the kernel from the host.\n");

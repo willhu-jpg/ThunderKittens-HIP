@@ -11,7 +11,7 @@
 int main(int argc, char **argv) {
     // create dummy variables that are the right size
     constexpr int TOTAL_ELEMENTS_X = ATTN_B*ATTN_N*ATTN_D;
-    constexpr int TOTAL_ELEMENTS_O = ATTN_B*ATTN_N*ATTN_N;
+    constexpr int TOTAL_ELEMENTS_O = ATTN_B*ATTN_N*ATTN_D;
     float *x     = new float[TOTAL_ELEMENTS_X];
     float *o     = new float[TOTAL_ELEMENTS_O];
     float *o_ref = new float[TOTAL_ELEMENTS_O];

@@ -15,7 +15,7 @@ struct micro_globals {
     _gl x, o;
 };
 
-__global__ __launch_bounds__(NUM_THREADS, 1)
+__global__
 void micro_tk(const micro_globals g) {
 
     // shared memory
