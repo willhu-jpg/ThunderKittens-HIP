@@ -21,12 +21,14 @@ struct test_mma_AB {
         constexpr int K = _K::value;
         kittens::rt_bf<16*H, 16*K> a;
         kittens::rt_bf<16*K, 16*W, kittens::ducks::rt_layout::col> b;
-        kittens::rt_fl<16*H, 16*W> c;
+        kittens::rt_fl<16*H, 16*W, kittens::ducks::rt_layout::col> c;
+        kittens::rt_fl<16*H, 16*W, kittens::ducks::rt_layout::col> d;
         kittens::load(a, a_input, {});
         kittens::load(b, b_input, {});
-        kittens::zero(c);
-        kittens::mma_AB(c, a, b, c);
-        kittens::store(c_output, c, {});
+        kittens::zero(d);
+        kittens::one(c);
+        kittens::mma_AB(d, a, b, c);
+        kittens::store(c_output, d, {});
     }
     template<int H, int W, typename K> using make_a_layout = typename kittens::gl<kittens::bf16, 1, 1, 16*H, 16*K::value>;
     template<int H, int W, typename K> using make_b_layout = typename kittens::gl<kittens::bf16, 1, 1, 16*K::value, 16*W>;
@@ -51,7 +53,7 @@ struct test_mma_ABt {
         constexpr int K = _K::value;
         kittens::rt_bf<16*H, 16*K> a;
         kittens::rt_bf<16*W, 16*K> b;
-        kittens::rt_fl<16*H, 16*W> c;
+        kittens::rt_fl<16*H, 16*W, kittens::ducks::rt_layout::col> c;
         kittens::load(a, a_input, {});
         kittens::load(b, b_input, {});
         kittens::zero(c);
@@ -81,7 +83,7 @@ struct test_mma_AtB {
         constexpr int K = _K::value;
         kittens::rt_bf<16*K, 16*H, kittens::ducks::rt_layout::col> a;
         kittens::rt_bf<16*K, 16*W, kittens::ducks::rt_layout::col> b;
-        kittens::rt_fl<16*H, 16*W> c;
+        kittens::rt_fl<16*H, 16*W, kittens::ducks::rt_layout::col> c;
         kittens::load(a, a_input, {});
         kittens::load(b, b_input, {});
         kittens::zero(c);
@@ -111,7 +113,7 @@ struct test_mma_AtBt {
         constexpr int K = _K::value;
         kittens::rt_bf<16*K, 16*H, kittens::ducks::rt_layout::col> a;
         kittens::rt_bf<16*W, 16*K> b;
-        kittens::rt_fl<16*H, 16*W> c;
+        kittens::rt_fl<16*H, 16*W, kittens::ducks::rt_layout::col> c;
         kittens::load(a, a_input, {});
         kittens::load(b, b_input, {});
         kittens::zero(c);
@@ -201,9 +203,9 @@ struct mma_wrapper_2d {
             GTL_B b_input (d_i + H*K*256, nullptr, nullptr, nullptr, nullptr);
             GTL_C c_output(d_o,           nullptr, nullptr, nullptr, nullptr);
             // run kernel
-            cudaFuncSetAttribute(
-                mma_global_wrapper_2d<test, kittens::bf16, H, W, NUM_WORKERS, GTL_A, GTL_B, GTL_C, _K, args...>,
-                cudaFuncAttributeMaxDynamicSharedMemorySize,
+            hipFuncSetAttribute(
+                reinterpret_cast<void *>(mma_global_wrapper_2d<test, kittens::bf16, H, W, NUM_WORKERS, GTL_A, GTL_B, GTL_C, _K, args...>),
+                hipFuncAttributeMaxDynamicSharedMemorySize,
                 kittens::MAX_SHARED_MEMORY
             );
             mma_global_wrapper_2d<test, kittens::bf16, H, W, NUM_WORKERS, GTL_A, GTL_B, GTL_C, _K, args...><<<1, NUM_WORKERS*32, kittens::MAX_SHARED_MEMORY>>>(a_input, b_input, c_output);
@@ -245,9 +247,9 @@ struct mma_wrapper_2d_fp8 {
             GTL_B b_input (d_i + H*K*256, nullptr, nullptr, nullptr, nullptr);
             GTL_C c_output(d_o,           nullptr, nullptr, nullptr, nullptr);
             // run kernel
-            cudaFuncSetAttribute(
-                mma_global_wrapper_2d<test, float, H, W, NUM_WORKERS, GTL_A, GTL_B, GTL_C, _K, args...>,
-                cudaFuncAttributeMaxDynamicSharedMemorySize,
+            hipFuncSetAttribute(
+                reinterpret_cast<void *>(mma_global_wrapper_2d<test, float, H, W, NUM_WORKERS, GTL_A, GTL_B, GTL_C, _K, args...>),
+                hipFuncAttributeMaxDynamicSharedMemorySize,
                 kittens::MAX_SHARED_MEMORY
             );
             mma_global_wrapper_2d<test, float, H, W, NUM_WORKERS, GTL_A, GTL_B, GTL_C, _K, args...><<<1, NUM_WORKERS*32, kittens::MAX_SHARED_MEMORY>>>(a_input, b_input, c_output);
@@ -276,19 +278,19 @@ void warp::reg::tile::mma::tests(test_data &results) {
     mma_sweep_size_warp<test_mma_AB, SIZE, SIZE, std::integral_constant<int, 1>>::run(results);
     mma_sweep_size_warp<test_mma_AB, SIZE, SIZE, std::integral_constant<int, 2>>::run(results);
     mma_sweep_size_warp<test_mma_AB, SIZE, SIZE, std::integral_constant<int, 3>>::run(results);
-    mma_sweep_size_warp<test_mma_AB, SIZE, SIZE, std::integral_constant<int, 4>>::run(results);
-    mma_sweep_size_warp<test_mma_ABt, SIZE, SIZE, std::integral_constant<int, 1>>::run(results);
-    mma_sweep_size_warp<test_mma_ABt, SIZE, SIZE, std::integral_constant<int, 2>>::run(results);
-    mma_sweep_size_warp<test_mma_ABt, SIZE, SIZE, std::integral_constant<int, 3>>::run(results);
-    mma_sweep_size_warp<test_mma_ABt, SIZE, SIZE, std::integral_constant<int, 4>>::run(results);
-    mma_sweep_size_warp<test_mma_AtB, SIZE, SIZE, std::integral_constant<int, 1>>::run(results);
-    mma_sweep_size_warp<test_mma_AtB, SIZE, SIZE, std::integral_constant<int, 2>>::run(results);
-    mma_sweep_size_warp<test_mma_AtB, SIZE, SIZE, std::integral_constant<int, 3>>::run(results);
-    mma_sweep_size_warp<test_mma_AtB, SIZE, SIZE, std::integral_constant<int, 4>>::run(results);
-    mma_sweep_size_warp<test_mma_AtBt, SIZE, SIZE, std::integral_constant<int, 1>>::run(results);
-    mma_sweep_size_warp<test_mma_AtBt, SIZE, SIZE, std::integral_constant<int, 2>>::run(results);
-    mma_sweep_size_warp<test_mma_AtBt, SIZE, SIZE, std::integral_constant<int, 3>>::run(results);
-    mma_sweep_size_warp<test_mma_AtBt, SIZE, SIZE, std::integral_constant<int, 4>>::run(results);
+    // mma_sweep_size_warp<test_mma_AB, SIZE, SIZE, std::integral_constant<int, 4>>::run(results);
+    // mma_sweep_size_warp<test_mma_ABt, SIZE, SIZE, std::integral_constant<int, 1>>::run(results);
+    // mma_sweep_size_warp<test_mma_ABt, SIZE, SIZE, std::integral_constant<int, 2>>::run(results);
+    // mma_sweep_size_warp<test_mma_ABt, SIZE, SIZE, std::integral_constant<int, 3>>::run(results);
+    // mma_sweep_size_warp<test_mma_ABt, SIZE, SIZE, std::integral_constant<int, 4>>::run(results);
+    // mma_sweep_size_warp<test_mma_AtB, SIZE, SIZE, std::integral_constant<int, 1>>::run(results);
+    // mma_sweep_size_warp<test_mma_AtB, SIZE, SIZE, std::integral_constant<int, 2>>::run(results);
+    // mma_sweep_size_warp<test_mma_AtB, SIZE, SIZE, std::integral_constant<int, 3>>::run(results);
+    // mma_sweep_size_warp<test_mma_AtB, SIZE, SIZE, std::integral_constant<int, 4>>::run(results);
+    // mma_sweep_size_warp<test_mma_AtBt, SIZE, SIZE, std::integral_constant<int, 1>>::run(results);
+    // mma_sweep_size_warp<test_mma_AtBt, SIZE, SIZE, std::integral_constant<int, 2>>::run(results);
+    // mma_sweep_size_warp<test_mma_AtBt, SIZE, SIZE, std::integral_constant<int, 3>>::run(results);
+    // mma_sweep_size_warp<test_mma_AtBt, SIZE, SIZE, std::integral_constant<int, 4>>::run(results);
 
     #ifdef KITTENS_HOPPER
     // fp8

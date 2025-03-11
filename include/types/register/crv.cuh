@@ -89,7 +89,7 @@ template<typename T> concept tile_layout  = align_layout<T> || ortho_layout<T>; 
 } // namespace ducks
 
 template<int _l, ducks::rv_layout::all layout=ducks::rv_layout::naive> using crv_fl = crv<float, _l, layout>;
-// template<int _l, ducks::rv_layout::all layout=ducks::rv_layout::naive> using crv_bf = crv<bf16,  _l, layout>;
-// template<int _l, ducks::rv_layout::all layout=ducks::rv_layout::naive> using crv_hf = crv<half,  _l, layout>;
+template<int _l, ducks::rv_layout::all layout=ducks::rv_layout::naive> using crv_bf = crv<bf16,  _l, layout>;
+template<int _l, ducks::rv_layout::all layout=ducks::rv_layout::naive> using crv_hf = crv<half,  _l, layout>;
 
 } // namespace kittens

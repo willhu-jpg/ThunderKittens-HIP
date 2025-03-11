@@ -8,7 +8,7 @@
 // #include "conversions.cuh"
 #include "maps.cuh"
 #include "reductions.cuh"
-// #include "mma.cuh"
+#include "mma.cuh"
 
 
 // #include "complex/complex_conversions.cuh"

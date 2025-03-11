@@ -75,8 +75,8 @@ template <typename T> concept all = requires {
 
 /* ----------  WRAPPERS FOR PRETTINESS  ---------- */
 
-// template<int _length> using csv_bf = csv<bf16,  _length>;
-// template<int _length> using csv_hf = csv<half,  _length>;
+template<int _length> using csv_bf = csv<bf16,  _length>;
+template<int _length> using csv_hf = csv<half,  _length>;
 template<int _length> using csv_fl = csv<float, _length>;
 
 }
