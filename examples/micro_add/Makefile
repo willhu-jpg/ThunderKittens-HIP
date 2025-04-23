@@ -25,15 +25,16 @@ COMMON_INCLUDE_DIR := ../../Common
 GPU_RUNTIME := HIP
 
 # HIP variables
-ROCM_INSTALL_DIR := /opt/rocm
-HIP_INCLUDE_DIR  := $(ROCM_INSTALL_DIR)/include
+ROCM_INSTALL_DIR := /opt/rocm-6.3.1
+HIP_INCLUDE_DIR  := $(ROCM_INSTALL_DIR)/include/hip
 
 HIPCXX ?= $(ROCM_INSTALL_DIR)/bin/hipcc
+
 
 # Common variables and flags
 CXX_STD   := c++20
 ICXXFLAGS := -std=$(CXX_STD)
-ICPPFLAGS := -I $(COMMON_INCLUDE_DIR) -I${THUNDERKITTENS_ROOT}/include -I/opt/rocm/include/hip
+ICPPFLAGS := -I $(COMMON_INCLUDE_DIR) -I${THUNDERKITTENS_ROOT}/include -I${HIP_INCLUDE_DIR}
 ILDFLAGS  :=
 ILDLIBS   :=
 ARCH	  := --offload-arch=gfx942 # MI300X

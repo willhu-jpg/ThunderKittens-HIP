@@ -9,7 +9,7 @@ COMP_LEVEL=profile
 GPU_RUNTIME := HIP
 
 # HIP variables
-ROCM_INSTALL_DIR := /opt/rocm
+ROCM_INSTALL_DIR := /opt/rocm-6.3.1
 HIP_INCLUDE_DIR  := $(ROCM_INSTALL_DIR)/include/hip
 
 HIPCXX ?= $(ROCM_INSTALL_DIR)/bin/hipcc
@@ -25,7 +25,7 @@ HIPFLAGS+= -DTEST_INTENSITY=1
 # -DTEST_ALL means run all tests.
 # You can also specify subsections, e.g. -DTEST_WARP_MEMORY
 # Or individual tests, like -DTEST_WARP_MEMORY_VEC_DSMEM. Useful for debugging!
-HIPFLAGS+= -DTEST_WARP_REGISTER_TILE_MAPS
+HIPFLAGS+= -DTEST_WARP_REGISTER_TILE_REDUCTIONS
 
 ifeq ($(COMP_LEVEL),safe)
 HIPFLAGS+= -O0
