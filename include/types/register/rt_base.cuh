@@ -51,27 +51,20 @@ template<typename _T, ducks::rt_layout::all _layout> struct rt_base {
     using T2 = kittens::base_types::packing<_T>::packed_type;
     using dtype = T2; ///< Data type of the matrix elements
 
-    #ifdef KITTENS_HOPPER
-    static_assert(
-        std::is_same_v<dtype, bf16_2> || std::is_same_v<dtype, float2> || std::is_same_v<dtype, half_2> || std::is_same_v<dtype, fp8e4m3_4> || std::is_same_v<dtype, fp8e5m2_4>,
-        "rt_base was provided an unsupported type."
-    );
-    #else
     static_assert(
         std::is_same_v<dtype, bf16_2> || std::is_same_v<dtype, float2> || std::is_same_v<dtype, half_2>,
         "rt_base was provided an unsupported type."
     );
-    #endif
 
     static constexpr int tile_size_row        = kittens::TILE_ROW_DIM<T>; // < Tile size is a constant 16 for everyone
     static constexpr int tile_size_col        = kittens::TILE_COL_DIM<T>;
     static constexpr int rows                 = tile_size_row; ///< Number of rows.
     static constexpr int cols                 = tile_size_col; ///< Number of cols.
-    static constexpr int num_elements         = rows*cols; // 256 (64 for fp8e4m3)
-    static constexpr int elements_per_thread  = num_elements / 32; // 8 (2 for fp8e4m3)
+    static constexpr int num_elements         = rows*cols; // 256
+    static constexpr int elements_per_thread  = num_elements / kittens::WARP_THREADS; // 4
 
-    static constexpr int packed_per_thread    = (elements_per_thread / base_types::packing<dtype>::num()) ; // 4
-    static constexpr int registers_per_thread = packed_per_thread * sizeof(dtype) / 4; // 4 or 8, registers are 32-bit words
+    static constexpr int packed_per_thread    = (elements_per_thread / base_types::packing<dtype>::num()) ; // 2
+    static constexpr int registers_per_thread = packed_per_thread * sizeof(dtype) / 4; // 2 or 4, registers are 32-bit words
 
     using row_vec_layout = std::conditional_t<std::is_same_v<layout, ducks::rt_layout::row>, ducks::rv_layout::align, ducks::rv_layout::ortho>; // for holding column reductions
     using col_vec_layout = std::conditional_t<std::is_same_v<layout, ducks::rt_layout::row>, ducks::rv_layout::ortho, ducks::rv_layout::align>; // for holding row reductions
@@ -105,8 +98,4 @@ template<typename T> concept all = requires {
 template<ducks::rt_layout::all L=ducks::rt_layout::row> using rt_base_fl = rt_base<float, L>;
 template<ducks::rt_layout::all L=ducks::rt_layout::row> using rt_base_bf = rt_base<bf16, L>;
 template<ducks::rt_layout::all L=ducks::rt_layout::row> using rt_base_hf = rt_base<half, L>;
-#ifdef KITTENS_HOPPER
-template<ducks::rt_layout::all L=ducks::rt_layout::row> using rt_base_fl8_e4m3 = rt_base<fp8e4m3, L>;
-template<ducks::rt_layout::all L=ducks::rt_layout::row> using rt_base_fl8_e5m2 = rt_base<fp8e5m2, L>;
-#endif
 }

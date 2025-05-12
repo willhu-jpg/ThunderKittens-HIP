@@ -267,6 +267,7 @@
 
 /* ----------  TEST INTENSITY MACROS  ---------- */
 
+#define TEST_INTENSITY_0 (0)
 // Intensity 1 is a cursory glance
 #define TEST_INTENSITY_1 (1)
 // Intensity 2 is to actually check
@@ -281,6 +282,7 @@
 #define TEST_INTENSITY (2)
 #endif
 
+#define INTENSITY_0 (TEST_INTENSITY == TEST_INTENSITY_0)
 #define INTENSITY_1 (TEST_INTENSITY == TEST_INTENSITY_1)
 #define INTENSITY_2 (TEST_INTENSITY == TEST_INTENSITY_2)
 #define INTENSITY_3 (TEST_INTENSITY == TEST_INTENSITY_3)

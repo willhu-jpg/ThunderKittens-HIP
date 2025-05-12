@@ -41,10 +41,10 @@ __device__ inline static void load(RT &dst, const ST &src) {
     int row_offset, col_offset;
     if constexpr (std::is_same_v<typename RT::layout, ducks::rt_layout::row>) {
         row_offset = laneid%16;
-        col_offset = 8*(laneid/16);
+        col_offset = 4*(laneid/16);
     }
     else {
-        row_offset = 8*(laneid/16);
+        row_offset = 4*(laneid/16);
         col_offset = laneid%16;
     }
     // printf("(dst.height, dst.width): (%d, %d)\n", dst.height, dst.width);
@@ -59,21 +59,15 @@ __device__ inline static void load(RT &dst, const ST &src) {
             if constexpr (std::is_same_v<typename RT::layout, ducks::rt_layout::row>) { // handle the row-major layout
                 dst.tiles[i][j].data[0] = base_types::convertor<T2, U2>::convert(*(U2*)(&src[{row, col+0}]));
                 dst.tiles[i][j].data[1] = base_types::convertor<T2, U2>::convert(*(U2*)(&src[{row, col+2}]));
-                dst.tiles[i][j].data[2] = base_types::convertor<T2, U2>::convert(*(U2*)(&src[{row, col+4}]));
-                dst.tiles[i][j].data[3] = base_types::convertor<T2, U2>::convert(*(U2*)(&src[{row, col+6}]));
             }
             else { // handle the column-major layout
-                U2 tmp[4];
+                U2 tmp[2];
                 
                 tmp[0] = U2{src[{row+0, col}], src[{row+1, col}]};
                 tmp[1] = U2{src[{row+2, col}], src[{row+3, col}]};
-                tmp[2] = U2{src[{row+4, col}], src[{row+5, col}]};
-                tmp[3] = U2{src[{row+6, col}], src[{row+7, col}]};
 
                 dst.tiles[i][j].data[0] = base_types::convertor<T2, U2>::convert(tmp[0]);
                 dst.tiles[i][j].data[1] = base_types::convertor<T2, U2>::convert(tmp[1]);
-                dst.tiles[i][j].data[2] = base_types::convertor<T2, U2>::convert(tmp[2]);
-                dst.tiles[i][j].data[3] = base_types::convertor<T2, U2>::convert(tmp[3]);
             }
         }
     }
@@ -103,10 +97,10 @@ __device__ inline static void store(ST &dst, const RT &src) {
     int row_offset, col_offset;
     if constexpr (std::is_same_v<typename RT::layout, ducks::rt_layout::row>) {
         row_offset = laneid%16;
-        col_offset = 8*(laneid/16);
+        col_offset = 4*(laneid/16);
     }
     else {
-        row_offset = 8*(laneid/16);
+        row_offset = 4*(laneid/16);
         col_offset = laneid%16;
     }
     #pragma unroll
@@ -118,25 +112,17 @@ __device__ inline static void store(ST &dst, const RT &src) {
             if constexpr (std::is_same_v<typename RT::layout, ducks::rt_layout::row>) { // handle the row-major layout
                 *(U2*)(&dst[{row, col+0}]) = base_types::convertor<U2, T2>::convert(src.tiles[i][j].data[0]);
                 *(U2*)(&dst[{row, col+2}]) = base_types::convertor<U2, T2>::convert(src.tiles[i][j].data[1]);
-                *(U2*)(&dst[{row, col+4}]) = base_types::convertor<U2, T2>::convert(src.tiles[i][j].data[2]);
-                *(U2*)(&dst[{row, col+6}]) = base_types::convertor<U2, T2>::convert(src.tiles[i][j].data[3]);
             }
             else { // handle the column-major layout
-                U2 tmp[4];
+                U2 tmp[2];
 
                 tmp[0] = base_types::convertor<U2, T2>::convert(src.tiles[i][j].data[0]);
                 tmp[1] = base_types::convertor<U2, T2>::convert(src.tiles[i][j].data[1]);
-                tmp[2] = base_types::convertor<U2, T2>::convert(src.tiles[i][j].data[2]);
-                tmp[3] = base_types::convertor<U2, T2>::convert(src.tiles[i][j].data[3]);
 
                 dst[{row+0, col}] = std::bit_cast<U>(tmp[0].x);
                 dst[{row+1, col}] = std::bit_cast<U>(tmp[0].y);
                 dst[{row+2, col}] = std::bit_cast<U>(tmp[1].x);
                 dst[{row+3, col}] = std::bit_cast<U>(tmp[1].y);
-                dst[{row+4, col}] = std::bit_cast<U>(tmp[2].x);
-                dst[{row+5, col}] = std::bit_cast<U>(tmp[2].y);
-                dst[{row+6, col}] = std::bit_cast<U>(tmp[3].x);
-                dst[{row+7, col}] = std::bit_cast<U>(tmp[3].y);
             }            
         }
     }

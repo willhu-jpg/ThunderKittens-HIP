@@ -32,7 +32,7 @@ __device__ static inline void load(ST &dst, const GL &src, const COORD &idx) {
     // uint32_t dst_ptr = static_cast<uint32_t>(__cvta_generic_to_shared(&dst.data[0]));
     uint32_t dst_ptr = reinterpret_cast<uintptr_t>(&dst.data[0]);
     int laneid = threadIdx.x % N_THREADS;
-    // printf("laneid: %d\n", laneid);
+
 
     #pragma unroll
     for(int i = 0; i < total_calls; i++) {
@@ -45,7 +45,7 @@ __device__ static inline void load(ST &dst, const GL &src, const COORD &idx) {
 
         // *(float4*)(&dst[{row, col}]) = *(float4*)(&src[row + col]);
         *(float4*)(&dst[{row, col}]) = *(float4*)&src_ptr[row * row_stride + col];
-
+        
         // if constexpr (assume_aligned) {
         //     float4 tmp;
         //     move<float4>::ldg(tmp, (float4*)&src_ptr[row*row_stride + col]);
@@ -104,7 +104,6 @@ __device__ static inline void store(const GL &dst, const ST &src, const COORD &i
 
         // *(float4*) &dst_ptr[row*row_stride + col] = *(float4*)src.idx(src_ptr, {row, col});
         *(float4*) &dst_ptr[row * row_stride + col] = *(float4*)(&src[{row, col}]);
-
         // if constexpr (assume_aligned) {
         //     float4 tmp;
         //     move<float4>::lds(tmp, src.idx(src_ptr, {row, col}));

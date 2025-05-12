@@ -39,11 +39,11 @@ template<typename T> constexpr int TILE_ELEMENTS{TILE_COL_DIM<T>*TILE_ROW_DIM<T>
 /**
  * @brief Constant representing number of threads in a warp.
  */
-constexpr int WARP_THREADS{32};
+constexpr int WARP_THREADS{64};
 /**
  * @brief Constant representing number of threads in a warpgroup of four warps.
  */
-constexpr int WARPGROUP_THREADS{128};
+constexpr int WARPGROUP_THREADS{256};
 /**
 
  * @brief Constant representing number of warps in a warpgroup of four warps.
@@ -54,27 +54,21 @@ constexpr int WARPGROUP_WARPS{4};
  * @brief Get the warp ID of the current thread.
  * @return The warp ID.
  */
-__device__ __forceinline__ int warpid() { return threadIdx.x >> 5; } 
+__device__ __forceinline__ int warpid() { return threadIdx.x >> 6; } 
 /**
  * @brief Get the warpgroup ID of the current thread.
  * @return The warpgroup ID.
  */
-__device__ __forceinline__ int warpgroupid() { return threadIdx.x >> 7; } 
+__device__ __forceinline__ int warpgroupid() { return threadIdx.x >> 8; } 
+
 /**
  * @brief Get the lane ID of the current thread within its warp.
  * @return The lane ID.
  */
-__device__ __forceinline__ int laneid() { return threadIdx.x & 0x1f; }
+__device__ __forceinline__ int laneid() { return threadIdx.x & 0x3f; }
 
-#if defined(KITTENS_HOPPER)
-constexpr int MAX_SHARED_MEMORY = 227000;
-#elif defined(KITTENS_A100)
-constexpr int MAX_SHARED_MEMORY = 164000;
-#elif defined(KITTENS_4090)
-constexpr int MAX_SHARED_MEMORY = 100000;
-#elif defined(KITTENS_CDNA3)
+
 constexpr int MAX_SHARED_MEMORY = 65536;
-#endif
 
 /* ----------  TYPE HELPERS  ---------- */
 
@@ -168,6 +162,10 @@ __device__ inline float2 packed_shfl<float2>(uint32_t mask, const float2 &f, int
     return r;
 }
 
+using bytes_8  = HIP_vector_type<float, 2>;
+using bytes_16 = HIP_vector_type<float, 4>;
+using bytes_32 = HIP_vector_type<float, 8>;
+
 /* ----------  SHARED MEMORY UTILS  ---------- */
 
 // namespace ducks {
@@ -197,11 +195,7 @@ __device__ inline float2 packed_shfl<float2>(uint32_t mask, const float2 &f, int
 #define KITTENS_ALIGN_AS(n) alignas(n)
 #endif
 
-#ifdef KITTENS_HOPPER
-#define KITTENS_DEFAULT_ALIGN KITTENS_ALIGN_AS(128)
-#else
 #define KITTENS_DEFAULT_ALIGN KITTENS_ALIGN_AS(16)
-#endif
 
 /**
  * @brief Dummy structure for alignment purposes. Needed for WGMMA and TMA calls.
@@ -211,11 +205,7 @@ struct KITTENS_DEFAULT_ALIGN alignment_dummy { int dummy; };
  * @brief Very simple allocator for dynamic shared memory. Advances pointer and tracks alignments.
  * @tparam default_alignment The default alignment this allocator will enforce. If <=0 (default -1) it will not align.
  */
-#ifdef KITTENS_HOPPER
-template<int default_alignment=1024> 
-#else
 template<int default_alignment=16> 
-#endif
 struct shared_allocator {
     int *ptr;
 
@@ -282,12 +272,5 @@ struct shared_allocator {
             return *p;
         }
 };
-#ifdef KITTENS_HOPPER
-/**
- * @brief A wrapper for an allocator that enforces sufficient alignment to be used for TMA loads and stores.
- */
-using tma_allocator = shared_allocator<1024>;
-using tma_swizzle_allocator = tma_allocator; // swizzled TMA modes require up to 1024 byte alignments :/
-#endif
 
 } // namespace kittens

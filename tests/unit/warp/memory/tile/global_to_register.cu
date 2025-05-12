@@ -30,7 +30,7 @@ struct g2r_wrapper_2d {
                 hipFuncAttributeMaxDynamicSharedMemorySize,
                 kittens::MAX_SHARED_MEMORY
             );
-            global_wrapper_2d<test, dtype, H, W, NUM_WORKERS, GL, args...><<<1, NUM_WORKERS*32, kittens::MAX_SHARED_MEMORY>>>(input, output);
+            global_wrapper_2d<test, dtype, H, W, NUM_WORKERS, GL, args...><<<1, NUM_WORKERS*64, kittens::MAX_SHARED_MEMORY>>>(input, output);
             // fill in correct results on cpu
             test::template host_func<H, W, NUM_WORKERS, GL, args...>(i_ref, o_ref);
             // check and cleanup
@@ -78,8 +78,6 @@ void warp::memory::tile::global_to_register::tests(test_data &results) {
     g2r_sweep_size_2d_warp<load_store<kittens::bf16>, SIZE, SIZE, kittens::ducks::rt_layout::col>::run(results);
     g2r_sweep_size_2d_warp<load_store<kittens::half>, SIZE, SIZE, kittens::ducks::rt_layout::row>::run(results);
     g2r_sweep_size_2d_warp<load_store<kittens::half>, SIZE, SIZE, kittens::ducks::rt_layout::col>::run(results);
-    // g2r_sweep_size_2d_warp<load_store<kittens::fp8e4m3>, SIZE, SIZE, kittens::ducks::rt_layout::row>::run(results);
-    // g2r_sweep_size_2d_warp<load_store<kittens::fp8e4m3>, SIZE, SIZE, kittens::ducks::rt_layout::col>::run(results);
 }
 
 #endif

@@ -27,24 +27,32 @@ void micro_tk(const micro_globals g) {
     // register memory 
     rt_fl<_row, _col> x_reg_fl;
 
-    // load from HBM to shared
-    load(x_s, g.x, {0, 0, 0, 0});
+    // load from HBM to register
+    load(x_reg_fl, g.x, {0, 0, 0, 0});
     __syncthreads();
 
+    // load from HBM to shared
+    // load(x_s, g.x, {0, 0, 0, 0});
+    // __syncthreads();
+
     // load from shared to register
-    load(x_reg_fl, x_s);
-    __syncthreads();
+    // load(x_reg_fl, x_s);
+    // __syncthreads();
 
     // x (dst) = x (src b) + x (src a)
     add(x_reg_fl, x_reg_fl, x_reg_fl);
     __syncthreads();
 
     // store from register to shared
-    store(o_s, x_reg_fl);
-    __syncthreads();
+    // store(o_s, x_reg_fl);
+    // __syncthreads();
 
     // store from shared to HBM
-    store(g.o, o_s, {0, 0, 0, 0});
+    // store(g.o, o_s, {0, 0, 0, 0});
+    // __syncthreads();
+
+    // store from register to HBM
+    store(g.o, x_reg_fl, {0, 0, 0, 0});
     __syncthreads();
 }
 
@@ -57,7 +65,7 @@ void dispatch_micro( float *d_x, float *d_o ) {
     unsigned long mem_size = 50480; 
     HIP_CHECK(hipFuncSetAttribute(reinterpret_cast<const void*>(micro_tk), 
                 hipFuncAttributeMaxDynamicSharedMemorySize, mem_size));
-    micro_tk<<<1,32,mem_size>>>(g);
+    micro_tk<<<1,64,mem_size>>>(g);
     hipDeviceSynchronize();
 }
 

@@ -5,9 +5,9 @@ import numpy as np
 import sys
 import math
 
-B = 1
+M = 16
 N = 16
-D = 32
+K = 16
 
 TESTNAME = sys.argv[1]
 
@@ -22,27 +22,35 @@ if torch.cuda.is_available():
     print("Device name:", props.name)
 
 if TESTNAME == 'ones':
-    x = torch.ones((B, N, D), dtype=torch.float32, device='cuda')
+    x = torch.ones((M, K), dtype=torch.bfloat16, device='cuda')
+    y = torch.ones((K, N), dtype=torch.bfloat16, device='cuda')
 elif TESTNAME == 'randn':
-    x = torch.randn((B, N, D), dtype=torch.float32, device='cuda') / D
+    x = torch.randn((M, K), dtype=torch.bfloat16, device='cuda')
+    y = torch.randn((K, N), dtype=torch.bfloat16, device='cuda')
 elif TESTNAME == "arange":
-    x = torch.arange(B*N*D, dtype=torch.float32, device='cuda').reshape(B, N, D)
+    x = torch.arange(M*K, dtype=torch.bfloat16, device='cuda').reshape(M, K)
+    y = torch.arange(K*N, dtype=torch.bfloat16, device='cuda').reshape(K, N)
 else:
     print('Invalid test name')
     sys.exit(0)
 
-def get_output(x):
+def get_output(x, y):
     # TEST 1: add
-    o = x
+    with torch.amp.autocast('cuda', dtype=torch.bfloat16):
+        o = torch.matmul(x, y)
     return o
 
-o = get_output(x)
+o = get_output(x, y)
 
 with open(f'{TESTNAME}.txt', 'w') as f:
     xf = x.to(torch.float32).flatten().detach().cpu().numpy().tolist()
+    yf = y.to(torch.float32).flatten().detach().cpu().numpy().tolist()
     of = o.to(torch.float32).flatten().detach().cpu().numpy().tolist()
     for i in trange(len(xf)):
         f.write(repr(xf[i]))
+        f.write(' ')
+    for i in trange(len(yf)):
+        f.write(repr(yf[i]))
         f.write(' ')
     for i in trange(len(of)):
         f.write(repr(of[i]))

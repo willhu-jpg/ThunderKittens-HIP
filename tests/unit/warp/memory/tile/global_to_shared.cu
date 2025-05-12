@@ -31,7 +31,7 @@ struct g2s_wrapper_2d {
                 hipFuncAttributeMaxDynamicSharedMemorySize,
                 kittens::MAX_SHARED_MEMORY
             );
-            global_wrapper_2d<test, dtype, H, W, NUM_WORKERS, GL, axis, args...><<<1, NUM_WORKERS*32, kittens::MAX_SHARED_MEMORY>>>(input, output);
+            global_wrapper_2d<test, dtype, H, W, NUM_WORKERS, GL, axis, args...><<<1, NUM_WORKERS*64, kittens::MAX_SHARED_MEMORY>>>(input, output);
             // fill in correct results on cpu
             test::template host_func<H, W, NUM_WORKERS, GL, axis, args...>(i_ref, o_ref);
             // check and cleanup
@@ -51,10 +51,6 @@ struct g2s_sweep_gmem_type_2d_warp {
         g2s_sweep_size_2d_warp<test<float>, MAX_H, MAX_W, args...>::run(results);
         g2s_sweep_size_2d_warp<test<kittens::bf16>, MAX_H, MAX_W, args...>::run(results);
         g2s_sweep_size_2d_warp<test<kittens::half>, MAX_H, MAX_W, args...>::run(results);
-        #ifdef KITTENS_HOPPER
-        g2s_sweep_size_2d_warp<test<kittens::fp8e4m3>, MAX_H, MAX_W, args...>::run(results);
-        g2s_sweep_size_2d_warp<test<kittens::fp8e5m2>, MAX_H, MAX_W, args...>::run(results);
-        #endif
     }
 };
 
