@@ -13,9 +13,9 @@ using _gl  = gl<float, -1, -1, -1, -1, st_fl<_row, _col>>;
 struct micro_globals {
     _gl x, o;
     // grid - number of thread blocks we are launching
-    dim3 grid()  { return dim3(x.batch, x.depth, x.rows); } 
+    dim3 grid()  { return dim3(x.batch, x.depth, (x.rows * x.cols + NUM_THREADS - 1) / NUM_THREADS); } 
     // block - number of threads in a thread block
-    dim3 block() { return dim3(x.cols); } 
+    dim3 block() { return dim3(NUM_THREADS); } 
     // Safe shared memory size for H100
     size_t dynamic_shared_memory() { return 224000; } 
 };
@@ -23,7 +23,6 @@ struct micro_globals {
 // define kernel
 __global__ __launch_bounds__(NUM_THREADS, 1)
 void micro_tk(const micro_globals g) {
-
     // shared memory
     extern __shared__ alignment_dummy __shm[];
     shared_allocator al((int*)&__shm[0]);

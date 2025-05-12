@@ -1,4 +1,5 @@
 import torch
+import simple_tk
 
 B = 1
 N = 16
@@ -28,10 +29,8 @@ input_copy = input.clone()
 
 output_tk = torch.zeros_like(input_copy)
 
-import simple_tk
 simple_tk.dispatch_micro(input_copy, output_tk)
 
-print(output_tk)
 print("TK output mean:", output_tk.mean().item())  # Debug final output
 
 # Okay sofar this is wrong!
