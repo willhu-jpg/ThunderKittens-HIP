@@ -30,7 +30,7 @@ struct transpose_wrapper_2d {
                 hipFuncAttributeMaxDynamicSharedMemorySize,
                 kittens::MAX_SHARED_MEMORY
             );
-            transpose_global_wrapper_2d<test, kittens::bf16, H, W, NUM_WORKERS, GTL_I, GTL_O, args...><<<1, NUM_WORKERS*32, kittens::MAX_SHARED_MEMORY>>>(input, output);
+            transpose_global_wrapper_2d<test, kittens::bf16, H, W, NUM_WORKERS, GTL_I, GTL_O, args...><<<1, NUM_WORKERS*64, kittens::MAX_SHARED_MEMORY>>>(input, output);
             // fill in correct results on cpu
             test::template host_func<H, W, NUM_WORKERS, GTL_I, GTL_O, args...>(i_ref, o_ref);
             // check and cleanup
@@ -125,6 +125,23 @@ struct test_make_causal {
         kittens::store(output, reg_tile, {});
     }
 };
+
+struct test_make_causal_t {
+    template<int H, int W, int NW, kittens::ducks::rt_layout::all L> using valid = std::bool_constant<NW == 1 && H==W && W*H<=64>; // this is warp-level
+    static inline const std::string test_identifier = "reg_make_causal";
+    template<int H, int W, int NW, gl_t GL, kittens::ducks::rt_layout::all L> __host__ static void host_func(const std::vector<float> &i_ref, std::vector<float> &o_ref) {
+        for(int i = 0; i < H*16; i++)
+            for(int j = 0; j < W*16; j++)
+                o_ref[i*W*16 + j] = j>=i ? i_ref[i*W*16 + j] : 0;
+    }
+    template<int H, int W, int NW, gl_t GL, kittens::ducks::rt_layout::all L> __device__ static void device_func(const GL input, const GL output) {
+        kittens::rt_fl<16*H, 16*W, L> reg_tile;
+        kittens::load(reg_tile, input, {});
+        kittens::make_causal_t(reg_tile, reg_tile);
+        kittens::store(output, reg_tile, {});
+    }
+};
+
 struct test_tril {
     template<int H, int W, int NW, kittens::ducks::rt_layout::all L> using valid = std::bool_constant<NW == 1 && H==W && W*H<=64>; // this is warp-level
     static inline const std::string test_identifier = "reg_tril";
@@ -261,6 +278,7 @@ void warp::reg::tile::conversions::tests(test_data &results) {
     sweep_size_2d_warp<test_triu, SIZE, SIZE, kittens::ducks::rt_layout::col>::run(results);
 
     sweep_size_2d_warp<test_make_causal, SIZE, SIZE, kittens::ducks::rt_layout::row>::run(results);
+    sweep_size_2d_warp<test_make_causal_t, SIZE, SIZE, kittens::ducks::rt_layout::row>::run(results);
     // sweep_size_2d_warp<test_make_causal, SIZE, SIZE, kittens::ducks::rt_layout::col>::run(results); NOT YET SUPPORTED
 }
 
