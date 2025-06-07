@@ -152,9 +152,8 @@ __device__ static inline void row_map(T &dst, const T &src, const V &row_values)
         #pragma unroll
         for(int j = 0; j < dst.width; j++) {
             #pragma unroll
-            for(int k = 0; k < dst.packed_per_tile/2; k++) {
-                dst.tiles[i][j].data[k+0] = op::template op<dtype>(src.tiles[i][j].data[k+0], row_values[i][0]);
-                dst.tiles[i][j].data[k+2] = op::template op<dtype>(src.tiles[i][j].data[k+2], row_values[i][1]);
+            for(int k = 0; k < dst.packed_per_tile; k++) {
+                dst.tiles[i][j].data[k] = op::template op<dtype>(src.tiles[i][j].data[k], row_values[i][k]);
             }
         }
     }
@@ -222,9 +221,8 @@ __device__ static inline void row_map(T &dst, const T &a, const T &b, const V &r
         #pragma unroll
         for(int j = 0; j < dst.width; j++) {
             #pragma unroll
-            for(int k = 0; k < dst.packed_per_tile/2; k++) {
-                dst.tiles[i][j].data[k+0] = op::template op<dtype>(a.tiles[i][j].data[k+0], b.tiles[i][j].data[k+0], row_values[i][0]);
-                dst.tiles[i][j].data[k+2] = op::template op<dtype>(a.tiles[i][j].data[k+2], b.tiles[i][j].data[k+2], row_values[i][1]);
+            for(int k = 0; k < dst.packed_per_tile; k++) {
+                dst.tiles[i][j].data[k] = op::template op<dtype>(a.tiles[i][j].data[k], b.tiles[i][j].data[k], row_values[i][k]);
             }
         }
     }
@@ -256,9 +254,8 @@ __device__ static inline void col_map(T &dst, const T &src, const V &col_values)
         #pragma unroll
         for(int i = 0; i < dst.height; i++) {
             #pragma unroll
-            for(int k = 0; k < dst.packed_per_tile/2; k++) {
-                dst.tiles[i][j].data[k+0] = op::template op<dtype>(src.tiles[i][j].data[k+0], col_values[j][0]);
-                dst.tiles[i][j].data[k+2] = op::template op<dtype>(src.tiles[i][j].data[k+2], col_values[j][1]);
+            for(int k = 0; k < dst.packed_per_tile; k++) {
+                dst.tiles[i][j].data[k] = op::template op<dtype>(src.tiles[i][j].data[k], col_values[j][k]);
             }
         }
     }
@@ -323,9 +320,8 @@ __device__ static inline void col_map(T &dst, const T &a, const T &b, const V &c
         #pragma unroll
         for(int i = 0; i < dst.height; i++) {
             #pragma unroll
-            for(int k = 0; k < dst.packed_per_tile/2; k++) {
-                dst.tiles[i][j].data[k+0] = op::template op<dtype>(a.tiles[i][j].data[k+0], b.tiles[i][j].data[k+0], col_values[j][0]);
-                dst.tiles[i][j].data[k+2] = op::template op<dtype>(a.tiles[i][j].data[k+2], b.tiles[i][j].data[k+2], col_values[j][1]);
+            for(int k = 0; k < dst.packed_per_tile; k++) {
+                dst.tiles[i][j].data[k] = op::template op<dtype>(a.tiles[i][j].data[k], b.tiles[i][j].data[k], col_values[j][k]);
             }
         }
     }

@@ -31,38 +31,36 @@ __device__ static inline void row_reduce(V &row_accum, const T &src, const V &sr
     static_assert(std::is_same_v<typename V::dtype, typename T::dtype>); // compatible type
     static_assert(V::outer_dim == T::height); // compatible size
 
-    using dtype = V::dtype;
+    using RT2 = V::dtype;
+    using RT = base_types::packing<RT2>::unpacked_type;
 
-    const int leader = threadIdx.x & 0x1C; // 11100 in binary
+    const int leader = laneid() % 16;
     #pragma unroll
     for(int i = 0; i < src.height; i++) {
-        dtype accum_top_row    = op::template op<dtype>(src.tiles[i][0].data[0], src.tiles[i][0].data[2]);
-        dtype accum_bottom_row = op::template op<dtype>(src.tiles[i][0].data[1], src.tiles[i][0].data[3]);
+        RT2 accum_packed = op::template op<RT2>(src.tiles[i][0].data[0], src.tiles[i][0].data[1]);
         #pragma unroll
         for(int j = 1; j < src.width; j++) {
             #pragma unroll
-            for(int k = 0; k < src.packed_per_tile; k+=2) {
-                accum_top_row    = op::template op<dtype>(accum_top_row,    src.tiles[i][j].data[k+0]);
-                accum_bottom_row = op::template op<dtype>(accum_bottom_row, src.tiles[i][j].data[k+1]);
+            for (int k = 0; k < src.packed_per_tile; k++) {
+                accum_packed = op::template op<RT2>(accum_packed, src.tiles[i][j].data[k]);
             }
         }
-        dtype accum_packed;
-        accum_packed.x = op::template op<typename base_types::packing<dtype>::unpacked_type>(accum_top_row.x,    accum_top_row.y);
-        accum_packed.y = op::template op<typename base_types::packing<dtype>::unpacked_type>(accum_bottom_row.x, accum_bottom_row.y);
+        RT accum_single = op::template op<RT>(accum_packed.x, accum_packed.y);
 
         // Now we need to do a lil shuffle to make everyone happy.
 
-        accum_packed = op::template op<dtype>(accum_packed, packed_shfl_down(MASK_ALL, accum_packed, 2));
-        accum_packed = op::template op<dtype>(accum_packed, packed_shfl_down(MASK_ALL, accum_packed, 1));
-
-        accum_packed = packed_shfl(MASK_ALL, accum_packed, leader);
+        accum_single = op::template op<RT>(accum_single, packed_shfl_down(MASK_ALL, accum_single, 32));
+        accum_single = op::template op<RT>(accum_single, packed_shfl_down(MASK_ALL, accum_single, 16));
 
         if(reset) {
-            row_accum[i][0] = accum_packed;
+            row_accum[i][0].x = accum_single;
         }
         else {
-            row_accum[i][0] = op::template op<dtype>(src_accum[i][0], accum_packed);
+            row_accum[i][0].x = op::template op<RT>(src_accum[i][0].x, accum_single);
         }
+
+        row_accum[i][0].x = packed_shfl(MASK_ALL, row_accum[i][0].x, leader);
+        row_accum[i][0].y = row_accum[i][0].x;
     }
 }
 /**
@@ -86,43 +84,42 @@ __device__ static inline void row_reduce(V &row_accum, const T &src, const V &sr
     static_assert(std::is_same_v<typename V::dtype, typename T::dtype>); // compatible type
     static_assert(V::outer_dim == T::height); // compatible size
 
-    using dtype = V::dtype;
+    using RT2 = V::dtype;
+    using RT = base_types::packing<RT2>::unpacked_type;
 
-    const int leader = threadIdx.x & 0x3; // 00011 in binary
+    const int leader = (laneid() / 16) * 16;
     #pragma unroll
     for(int i = 0; i < src.height; i++) {
-        dtype accum_top_rows    = op::template op<dtype>(src.tiles[i][0].data[0], src.tiles[i][0].data[1]);
-        dtype accum_bottom_rows = op::template op<dtype>(src.tiles[i][0].data[2], src.tiles[i][0].data[3]);
+        RT2 accum_top_rows = src.tiles[i][0].data[0];
+        RT2 accum_bottom_rows = src.tiles[i][0].data[1];
         #pragma unroll
         for(int j = 1; j < src.width; j++) {
-            #pragma unroll
-            for(int k = 0; k < src.packed_per_tile/2; k++) {
-                accum_top_rows    = op::template op<dtype>(accum_top_rows,    src.tiles[i][j].data[k+0]);
-                accum_bottom_rows = op::template op<dtype>(accum_bottom_rows, src.tiles[i][j].data[k+2]);
-            }
+            accum_top_rows    = op::template op<RT2>(accum_top_rows,    src.tiles[i][j].data[0]);
+            accum_bottom_rows = op::template op<RT2>(accum_bottom_rows, src.tiles[i][j].data[1]);
         }
 
         // Now we need to do a lil shuffle to make everyone happy.
+        accum_top_rows = op::template op<RT2>(accum_top_rows, packed_shfl_down(MASK_ALL, accum_top_rows, 8));
+        accum_top_rows = op::template op<RT2>(accum_top_rows, packed_shfl_down(MASK_ALL, accum_top_rows, 4));
+        accum_top_rows = op::template op<RT2>(accum_top_rows, packed_shfl_down(MASK_ALL, accum_top_rows, 2));
+        accum_top_rows = op::template op<RT2>(accum_top_rows, packed_shfl_down(MASK_ALL, accum_top_rows, 1));
 
-        accum_top_rows = op::template op<dtype>(accum_top_rows, packed_shfl_down(MASK_ALL, accum_top_rows, 16));
-        accum_top_rows = op::template op<dtype>(accum_top_rows, packed_shfl_down(MASK_ALL, accum_top_rows, 8));
-        accum_top_rows = op::template op<dtype>(accum_top_rows, packed_shfl_down(MASK_ALL, accum_top_rows, 4));
-
-        accum_bottom_rows = op::template op<dtype>(accum_bottom_rows, packed_shfl_down(MASK_ALL, accum_bottom_rows, 16));
-        accum_bottom_rows = op::template op<dtype>(accum_bottom_rows, packed_shfl_down(MASK_ALL, accum_bottom_rows, 8));
-        accum_bottom_rows = op::template op<dtype>(accum_bottom_rows, packed_shfl_down(MASK_ALL, accum_bottom_rows, 4));
-
-        accum_top_rows    = packed_shfl(MASK_ALL, accum_top_rows,    leader);
-        accum_bottom_rows = packed_shfl(MASK_ALL, accum_bottom_rows, leader);
+        accum_bottom_rows = op::template op<RT2>(accum_bottom_rows, packed_shfl_down(MASK_ALL, accum_bottom_rows, 8));
+        accum_bottom_rows = op::template op<RT2>(accum_bottom_rows, packed_shfl_down(MASK_ALL, accum_bottom_rows, 4));
+        accum_bottom_rows = op::template op<RT2>(accum_bottom_rows, packed_shfl_down(MASK_ALL, accum_bottom_rows, 2));
+        accum_bottom_rows = op::template op<RT2>(accum_bottom_rows, packed_shfl_down(MASK_ALL, accum_bottom_rows, 1));
 
         if(reset) {
             row_accum[i][0] = accum_top_rows;
             row_accum[i][1] = accum_bottom_rows;
         }
         else {
-            row_accum[i][0] = op::template op<dtype>(src_accum[i][0], accum_top_rows);
-            row_accum[i][1] = op::template op<dtype>(src_accum[i][1], accum_bottom_rows);
+            row_accum[i][0] = op::template op<RT2>(src_accum[i][0], accum_top_rows);
+            row_accum[i][1] = op::template op<RT2>(src_accum[i][1], accum_bottom_rows);
         }
+
+        row_accum[i][0] = packed_shfl(MASK_ALL, row_accum[i][0], leader);
+        row_accum[i][1] = packed_shfl(MASK_ALL, row_accum[i][1], leader);
     }
 }
 
@@ -148,43 +145,43 @@ __device__ static inline void col_reduce(V &col_accum, const T &src, const V &sr
     static_assert(std::is_same_v<typename V::dtype, typename T::dtype>); // compatible type
     static_assert(V::outer_dim == T::width); // compatible size
 
-    using dtype = V::dtype;
+    using RT2 = V::dtype;
+    using RT = base_types::packing<RT2>::unpacked_type;
 
-    const int leader = threadIdx.x & 0x3; // 00011 in binary
+    const int leader = (laneid() / 16) * 16;
     #pragma unroll
     for(int j = 0; j < src.width; j++) {
-        dtype accum_left_cols  = op::template op<dtype>(src.tiles[0][j].data[0], src.tiles[0][j].data[1]);
-        dtype accum_right_cols = op::template op<dtype>(src.tiles[0][j].data[2], src.tiles[0][j].data[3]);
+        RT2 accum_left_cols  = src.tiles[0][j].data[0];
+        RT2 accum_right_cols = src.tiles[0][j].data[1];
         #pragma unroll
         for(int i = 1; i < src.height; i++) {
-            #pragma unroll
-            for(int k = 0; k < src.packed_per_tile/2; k++) {
-                accum_left_cols  = op::template op<dtype>(accum_left_cols,  src.tiles[i][j].data[k+0]);
-                accum_right_cols = op::template op<dtype>(accum_right_cols, src.tiles[i][j].data[k+2]);
-            }
+            accum_left_cols = op::template op<RT2>(accum_left_cols, src.tiles[i][j].data[0]);
+            accum_right_cols = op::template op<RT2>(accum_right_cols, src.tiles[i][j].data[1]);
         }
 
         // Now we need to do a lil shuffle to make everyone happy.
 
-        accum_left_cols = op::template op<dtype>(accum_left_cols, packed_shfl_down(MASK_ALL, accum_left_cols, 16));
-        accum_left_cols = op::template op<dtype>(accum_left_cols, packed_shfl_down(MASK_ALL, accum_left_cols, 8));
-        accum_left_cols = op::template op<dtype>(accum_left_cols, packed_shfl_down(MASK_ALL, accum_left_cols, 4));
+        accum_left_cols = op::template op<RT2>(accum_left_cols, packed_shfl_down(MASK_ALL, accum_left_cols, 8));
+        accum_left_cols = op::template op<RT2>(accum_left_cols, packed_shfl_down(MASK_ALL, accum_left_cols, 4));
+        accum_left_cols = op::template op<RT2>(accum_left_cols, packed_shfl_down(MASK_ALL, accum_left_cols, 2));
+        accum_left_cols = op::template op<RT2>(accum_left_cols, packed_shfl_down(MASK_ALL, accum_left_cols, 1));
 
-        accum_right_cols = op::template op<dtype>(accum_right_cols, packed_shfl_down(MASK_ALL, accum_right_cols, 16));
-        accum_right_cols = op::template op<dtype>(accum_right_cols, packed_shfl_down(MASK_ALL, accum_right_cols, 8));
-        accum_right_cols = op::template op<dtype>(accum_right_cols, packed_shfl_down(MASK_ALL, accum_right_cols, 4));
-
-        accum_left_cols  = packed_shfl(MASK_ALL, accum_left_cols,  leader);
-        accum_right_cols = packed_shfl(MASK_ALL, accum_right_cols, leader);
+        accum_right_cols = op::template op<RT2>(accum_right_cols, packed_shfl_down(MASK_ALL, accum_right_cols, 8));
+        accum_right_cols = op::template op<RT2>(accum_right_cols, packed_shfl_down(MASK_ALL, accum_right_cols, 4));
+        accum_right_cols = op::template op<RT2>(accum_right_cols, packed_shfl_down(MASK_ALL, accum_right_cols, 2));
+        accum_right_cols = op::template op<RT2>(accum_right_cols, packed_shfl_down(MASK_ALL, accum_right_cols, 1));
 
         if(reset) {
             col_accum[j][0] = accum_left_cols;
             col_accum[j][1] = accum_right_cols;
         }
         else {
-            col_accum[j][0] = op::template op<dtype>(src_accum[j][0], accum_left_cols);
-            col_accum[j][1] = op::template op<dtype>(src_accum[j][1], accum_right_cols);
+            col_accum[j][0] = op::template op<RT2>(src_accum[j][0], accum_left_cols);
+            col_accum[j][1] = op::template op<RT2>(src_accum[j][1], accum_right_cols);
         }
+    
+        col_accum[j][0] = packed_shfl(MASK_ALL, col_accum[j][0], leader);
+        col_accum[j][1] = packed_shfl(MASK_ALL, col_accum[j][1], leader);
     }
 }
 /**
@@ -208,37 +205,37 @@ __device__ static inline void col_reduce(V &col_accum, const T &src, const V &sr
     static_assert(std::is_same_v<typename V::dtype, typename T::dtype>); // compatible type
     static_assert(V::outer_dim == T::width); // compatible size
 
-    using dtype = V::dtype;
-    const int leader = threadIdx.x & 0x1C; // 11100 in binary
+    using RT2 = V::dtype;
+    using RT = base_types::packing<RT2>::unpacked_type;
+
+    const int leader = laneid() % 16;
     #pragma unroll
     for(int j = 0; j < src.width; j++) { // note now width is the outer loop
-        dtype accum_left_col  = op::template op<dtype>(src.tiles[0][j].data[0], src.tiles[0][j].data[2]);
-        dtype accum_right_col = op::template op<dtype>(src.tiles[0][j].data[1], src.tiles[0][j].data[3]);
+        RT2 accum_packed = op::template op<RT2>(src.tiles[0][j].data[0], src.tiles[0][j].data[1]);
         #pragma unroll
         for(int i = 1; i < src.height; i++) { // and height is the inner loop
             #pragma unroll
-            for(int k = 0; k < src.packed_per_tile; k+=2) {
-                accum_left_col  = op::template op<dtype>(accum_left_col,  src.tiles[i][j].data[k+0]);
-                accum_right_col = op::template op<dtype>(accum_right_col, src.tiles[i][j].data[k+1]);
+            for(int k = 0; k < src.packed_per_tile; k++) {
+                accum_packed = op::template op<RT2>(accum_packed, src.tiles[i][j].data[k]);
             }
         }
-        dtype accum_packed;
-        accum_packed.x = op::template op<typename base_types::packing<dtype>::unpacked_type>(accum_left_col.x,  accum_left_col.y);
-        accum_packed.y = op::template op<typename base_types::packing<dtype>::unpacked_type>(accum_right_col.x, accum_right_col.y);
+
+        RT accum_single = op::template op<RT>(accum_packed.x, accum_packed.y);
 
         // Now we need to do a lil shuffle to make everyone happy.
 
-        accum_packed = op::template op<dtype>(accum_packed, packed_shfl_down(MASK_ALL, accum_packed, 2));
-        accum_packed = op::template op<dtype>(accum_packed, packed_shfl_down(MASK_ALL, accum_packed, 1));
-
-        accum_packed = packed_shfl(MASK_ALL, accum_packed, leader);
+        accum_single = op::template op<RT>(accum_single, packed_shfl_down(MASK_ALL, accum_single, 32));
+        accum_single = op::template op<RT>(accum_single, packed_shfl_down(MASK_ALL, accum_single, 16));
 
         if(reset) {
-            col_accum[j][0] = accum_packed;
+            col_accum[j][0].x = accum_single;
         }
         else {
-            col_accum[j][0] = op::template op<dtype>(src_accum[j][0], accum_packed);
+            col_accum[j][0].x = op::template op<RT>(src_accum[j][0].x, accum_single);
         }
+
+        col_accum[j][0].x = packed_shfl(MASK_ALL, col_accum[j][0].x, leader);
+        col_accum[j][0].y = col_accum[j][0].x;
     }
 }
 

@@ -93,10 +93,11 @@ struct broadcast_col {
 
 void warp::reg::tile::reductions::tests(test_data &results) {
     std::cout << "\n ----- Starting ops/warp/register/tile/reductions tests! -----\n" << std::endl;
-    constexpr int SIZE = INTENSITY_1 ? 2  :
+    constexpr int SIZE = INTENSITY_0 ? 1  :
+                         INTENSITY_1 ? 2  :
                          INTENSITY_2 ? 4  : 
                          INTENSITY_3 ? 8  :
-                         INTENSITY_4 ? 16 : -1;
+                         INTENSITY_4 ? 16 : 32;
     sweep_size_2d_warp<normalize_row, SIZE, SIZE, kittens::ducks::rt_layout::row>::run(results);
     sweep_size_2d_warp<normalize_row, SIZE, SIZE, kittens::ducks::rt_layout::col>::run(results);
     sweep_size_2d_warp<normalize_col, SIZE, SIZE, kittens::ducks::rt_layout::row>::run(results);
