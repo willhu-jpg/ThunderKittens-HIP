@@ -7,4 +7,4 @@
 
 #include "util/util.cuh"
 #include "tile/tile.cuh"
-// #include "vec/vec.cuh"
+#include "vec/vec.cuh"
