@@ -1,5 +1,5 @@
 # Compiler
-GPU=MI300
+GPU_TARGET=CDNA3
 
 TARGET=simple_tk
 SRC=example_add.hip
@@ -10,15 +10,22 @@ COMMON_INCLUDE_DIR := ../../Common
 GPU_RUNTIME := HIP
 
 # HIP variables
-ROCM_INSTALL_DIR := /opt/rocm-6.3.1
-HIP_INCLUDE_DIR  := $(ROCM_INSTALL_DIR)/include
+ROCM_INSTALL_DIR := $(ROCM_PATH)
+HIP_INCLUDE_DIR  := $(ROCM_INSTALL_DIR)/include/hip
 
 HIPCXX ?= $(ROCM_INSTALL_DIR)/bin/hipcc
+
+# Compiler flags based on GPU target
+ifeq ($(GPU_TARGET),CDNA2)
+HIPFLAGS+= -DKITTENS_CDNA2 --offload-arch=gfx90a
+else ifeq ($(GPU_TARGET),CDNA3)
+HIPFLAGS+= -DKITTENS_CDNA3 --offload-arch=gfx942
+endif
 
 # Common variables and flags
 CXX_STD   := c++20
 ICXXFLAGS := -std=$(CXX_STD)
-ICPPFLAGS := -I $(COMMON_INCLUDE_DIR) -I${THUNDERKITTENS_ROOT}/include -I/opt/rocm-6.3.1/include/hip
+ICPPFLAGS := -I $(COMMON_INCLUDE_DIR) -I${THUNDERKITTENS_ROOT}/include -I$(HIP_INCLUDE_DIR)
 ILDFLAGS  :=
 ILDLIBS   :=
 ARCH	  := --offload-arch=gfx90a # MI300X
@@ -38,7 +45,7 @@ ICXXFLAGS+= -I${THUNDERKITTENS_ROOT}/include -I${THUNDERKITTENS_ROOT}/prototype 
 all: $(TARGET)
 
 $(TARGET): $(SRC)
-	$(HIPCXX) $(SRC) $(ICXXFLAGS) $(ICPPFLAGS) $(ILDFLAGS) $(ARCH) -o $(TARGET)$(shell python3-config --extension-suffix)
+	$(HIPCXX) $(SRC) $(HIPFLAGS) $(ICXXFLAGS) $(ICPPFLAGS) $(ILDFLAGS) $(ARCH) -o $(TARGET)$(shell python3-config --extension-suffix)
 
 # Clean target
 clean:
