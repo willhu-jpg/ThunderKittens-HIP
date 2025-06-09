@@ -35,7 +35,7 @@ __device__ inline static void load(RV &dst, const GL &src, const COORD &idx) {
             int o_dim = w*4 + (laneid/8) / 2;
             int i_dim = (laneid/8) % 2;
             // this should be a maximally coalesced load.
-            if(idx < dst.outer_dim*16)
+            if(idx < dst.length)
                 dst[o_dim][i_dim] = base_types::convertor<T2, U2>::convert(*(U2*)&src_ptr[idx]);
         }
         // now we need to do a bunch of shuffle_sync's to make sure everyone has everything they need.
@@ -54,7 +54,7 @@ __device__ inline static void load(RV &dst, const GL &src, const COORD &idx) {
             int idx = w*64 + (laneid%8)*8 + (laneid/8);
             int o_dim = w*2 + (laneid%4) / 2;
             // this should be a maximally coalesced load.
-            if(idx < dst.outer_dim*16) {
+            if(idx < dst.length) {
                 T tmp = base_types::convertor<T, U>::convert(src_ptr[idx]);
                 if(laneid%2==0) dst[o_dim][0].x = tmp;
                 else dst[o_dim][0].y = tmp;
@@ -104,7 +104,7 @@ __device__ inline static void store(const GL &dst, const RV &src, const COORD &i
             int o_dim = w*4 + (laneid/8) / 2;
             int i_dim = (laneid/8) % 2;
             // this should be a maximally coalesced store. I hope!
-            if(idx < src.outer_dim*16)
+            if(idx < src.length)
                 *(U2*)&dst_ptr[idx] = base_types::convertor<U2, T2>::convert(src[o_dim][i_dim]);
         }
     }
@@ -116,7 +116,7 @@ __device__ inline static void store(const GL &dst, const RV &src, const COORD &i
             int idx = w*64 + (laneid%8)*8 + (laneid/8);
             int o_dim = w*2 + (laneid%4) / 2;
             // this should be a maximally coalesced load.
-            if(idx < src.outer_dim*16) {
+            if(idx < src.length) {
                 U tmp;
                 if(laneid%2==0) tmp = base_types::convertor<U, T>::convert(src[o_dim][0].x);
                 else tmp = base_types::convertor<U, T>::convert(src[o_dim][0].y);
