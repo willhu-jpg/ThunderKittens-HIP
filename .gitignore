@@ -9,3 +9,5 @@
 *.ncu-rep
 __pycache__/
 */printouts/*
+tests/unit/build/
+*.o
