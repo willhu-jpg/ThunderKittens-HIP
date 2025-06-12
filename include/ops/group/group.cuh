@@ -5,8 +5,6 @@
 
 #pragma once
 
-#include <cuda/pipeline>
-
 #include "../../common/common.cuh"
 #include "../../types/types.cuh"
 #include "../warp/warp.cuh" // several group memory ops rely on underlying warp-scope ops
@@ -31,7 +29,7 @@ __device__ static inline void sync(int id) { // backup: specify the barrier ID m
 }
 
 #include "memory/memory.cuh"
-#include "shared/shared.cuh"
+// #include "shared/shared.cuh"
 
 };
 

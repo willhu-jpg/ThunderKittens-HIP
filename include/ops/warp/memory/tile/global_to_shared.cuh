@@ -31,7 +31,7 @@ __device__ static inline void load(ST &dst, const GL &src, const COORD &idx) {
     typename GL::dtype *src_ptr = (typename GL::dtype*)&src[unit_coord];
 
     uint32_t dst_ptr = reinterpret_cast<uintptr_t>(&dst.data[0]);
-    int laneid = kittens::laneid();
+    int laneid = threadIdx.x % N_THREADS;
 
     #pragma unroll
     for(int i = 0; i < total_calls; i++) {
@@ -73,7 +73,7 @@ __device__ static inline void store(const GL &dst, const ST &src, const COORD &i
     typename GL::dtype *dst_ptr = (typename GL::dtype*)&dst[unit_coord];
 
     uint32_t src_ptr = reinterpret_cast<uintptr_t>(&src.data[0]);
-    int laneid = kittens::laneid();
+    int laneid = threadIdx.x % N_THREADS;
 
     #pragma unroll
     for(int i = 0; i < total_calls; i++) {

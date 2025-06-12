@@ -6,4 +6,4 @@
 #pragma once
 
 #include "warp/warp.cuh"
-// #include "group/group.cuh"
+#include "group/group.cuh"
