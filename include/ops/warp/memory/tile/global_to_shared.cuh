@@ -10,6 +10,25 @@
 
 namespace kittens {
 
+__device__ static inline void global_to_shared_b128(uint32_t lds_offset_bytes, float4* src_ptr) {
+    float4 temp;
+    uintptr_t ptr = reinterpret_cast<uintptr_t>(src_ptr);  // float4 indexing
+    uint32_t addr_lo = static_cast<uint32_t>(ptr & 0xFFFFFFFF);
+    uint32_t addr_hi = static_cast<uint32_t>(ptr >> 32);
+
+    asm volatile (
+        "flat_load_dwordx4 %0, [%1, %2]\n"
+        "s_waitcnt vmcnt(0)\n"
+        "s_mov_b32 m0, 0\n"
+        "ds_write_b128 %3, %0\n"
+        : "=v"(temp)                     // %0: output float4 (VGPR)
+        : "s"(addr_lo),                  // %1: 32-bit low address (SGPR)
+          "s"(addr_hi),                  // %2: 32-bit high address (SGPR)
+          "v"(lds_offset_bytes)         // %3: LDS offset
+        : "memory", "m0"
+    );
+}
+
 /**
  * @brief Loads data from global memory into a shared memory tile.
  *
@@ -35,16 +54,15 @@ __device__ static inline void load(ST &dst, const GL &src, const COORD &idx) {
 
     #pragma unroll
     for(int i = 0; i < total_calls; i++) {
-
         int load_idx = i * N_THREADS + laneid;
-        
         int row = load_idx / memcpy_per_row;
-
         int col = (load_idx*elem_per_memcpy) % dst.cols;
 
-        if (row < dst.rows) 
-            *(float4*)(&dst[{row, col}]) = *(float4*)&src_ptr[row * row_stride + col];
+        // if (row < dst.rows) 
+        //     *(float4*)(&dst[{row, col}]) = *(float4*)&src_ptr[row * row_stride + col];
         
+        if (row < dst.rows)
+            global_to_shared_b128(dst.idx(dst_ptr, {row, col}), (float4*)&src_ptr[row * row_stride + col]); 
     }
 }
 template<ducks::st::all ST, ducks::gl::all GL, ducks::coord::tile COORD=coord<ST>>
