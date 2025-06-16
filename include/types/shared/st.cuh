@@ -85,7 +85,7 @@ struct KITTENS_DEFAULT_ALIGN st {
 
     // wgmma layout with swizzling
     dtype data[rows*cols]; ///< Raw data storage for the tile.
-
+    
     __device__ static inline T* idx(T *ptr, int2 coord) { // naive row-major coord default
         int r = coord.x, c = coord.y; // alias
         static constexpr int swizzle_repeat = swizzle_bytes * 8;
@@ -189,6 +189,15 @@ struct st_subtile {
         const uint64_t addr = (uint64_t)(&ptr[outer_idx*underlying_rows*subtile_cols + r*subtile_cols + c%subtile_cols]);
         const int swizzle = ((addr % swizzle_repeat) >> 7) << 4;
         return (T*)(addr ^ swizzle);
+    }
+    __device__ inline const T* idx(const T *ptr, const int2 coord) const { // const version
+        int r = coord.x+row_offset, c = coord.y+col_offset; // alias
+        static constexpr int swizzle_repeat = swizzle_bytes * 8;
+        static constexpr int subtile_cols   = swizzle_bytes / sizeof(T);
+        const int outer_idx = c/subtile_cols;
+        const uint64_t addr = (uint64_t)(&ptr[outer_idx*underlying_rows*subtile_cols + r*subtile_cols + c%subtile_cols]);
+        const int swizzle = ((addr % swizzle_repeat) >> 7) << 4;
+        return (const T*)(addr ^ swizzle);
     }
     __device__ inline uint32_t idx(uint32_t ptr, const int2 coord) const { // naive row-major coord default
         int r = coord.x+row_offset, c = coord.y+col_offset; // alias
