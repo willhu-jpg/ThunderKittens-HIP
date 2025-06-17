@@ -10,59 +10,80 @@
 
 namespace kittens {
 
-__device__ static inline void global_to_shared_b128(uint32_t lds_offset_bytes, float4* src_ptr) {
-    float4 temp;
-    uintptr_t ptr = reinterpret_cast<uintptr_t>(src_ptr);  // float4 indexing
-    uint32_t addr_lo = static_cast<uint32_t>(ptr & 0xFFFFFFFF);
-    uint32_t addr_hi = static_cast<uint32_t>(ptr >> 32);
 
-    asm volatile (
+__device__ inline float4 load_global_vec(const float4* gptr) {
+    float4 v;
+    uintptr_t p  = reinterpret_cast<uintptr_t>(gptr);
+    uint32_t lo  = static_cast<uint32_t>(p);
+    uint32_t hi  = static_cast<uint32_t>(p >> 32);
+
+    asm volatile(
         "flat_load_dwordx4 %0, [%1, %2]\n"
-        "s_waitcnt vmcnt(0)\n"
-        "s_mov_b32 m0, 0\n"
-        "ds_write_b128 %3, %0\n"
-        : "=v"(temp)                     // %0: output float4 (VGPR)
-        : "s"(addr_lo),                  // %1: 32-bit low address (SGPR)
-          "s"(addr_hi),                  // %2: 32-bit high address (SGPR)
-          "v"(lds_offset_bytes)         // %3: LDS offset
-        : "memory", "m0"
+        : "=v"(v) 
+        : "s"(lo), "s"(hi) 
+        : "memory"
+    );
+    return v;   
+}
+
+// Store function using ds_write_b128 - proper float handling
+__device__ inline void store_shared_vec(uint32_t lds_off, float4 val) {
+    float *f = reinterpret_cast<float*>(&val);
+    asm volatile(
+        "ds_write_b128 %4, [%0, %1, %2, %3]\n"
+        :
+        : "v"(f[0]), "v"(f[1]), "v"(f[2]), "v"(f[3]), "v"(lds_off)
+        : "memory"
     );
 }
 
-/**
- * @brief Loads data from global memory into a shared memory tile.
- *
- * @tparam ST The type of the shared tile.
- * @param[out] dst The destination shared memory tile.
- * @param[in] src The source global memory array.
- * @param[in] idx The coordinate of the tile in the global memory array.
- */
-template<int axis, bool assume_aligned, ducks::st::all ST, ducks::gl::all GL, ducks::coord::tile COORD=coord<ST>, int N_THREADS=WARP_THREADS>
-__device__ static inline void load(ST &dst, const GL &src, const COORD &idx) {
-    using T = typename ST::dtype;
-    const int row_stride = src.template stride<axis>();
-    // we can handle this many rows each time we run a memcpy_async
-    constexpr int elem_per_memcpy = sizeof(float4)/sizeof(typename ST::dtype);
-    constexpr int memcpy_per_row = ST::cols / elem_per_memcpy;
-    constexpr int total_calls = (ST::cols * ST::rows + N_THREADS*elem_per_memcpy-1) / (N_THREADS*elem_per_memcpy); // round up
+template< int  axis, bool assume_aligned,
+          ducks::st::all ST, ducks::gl::all GL,
+          ducks::coord::tile COORD = coord<ST>,
+          int  N_THREADS = WARP_THREADS >
+__device__ inline void load(ST& dst, const GL& src, const COORD& idx)
+{
+    using DType = typename ST::dtype;
+    static constexpr int ELEM_PER_VEC = sizeof(float4) / sizeof(DType);
+    static constexpr int VEC_PER_ROW  = ST::cols / ELEM_PER_VEC;
+    static constexpr int TOTAL_VEC    = ST::rows * VEC_PER_ROW;
+    static constexpr int VEC_PER_THD  = (TOTAL_VEC + N_THREADS - 1) / N_THREADS;
 
-    coord<> unit_coord = idx.template unit_coord<axis, 3>();
-    typename GL::dtype *src_ptr = (typename GL::dtype*)&src[unit_coord];
+    // Small per-thread scratch
+    float4   buf[VEC_PER_THD];
+    uint32_t ofs[VEC_PER_THD];
 
-    uint32_t dst_ptr = reinterpret_cast<uintptr_t>(&dst.data[0]);
-    int laneid = threadIdx.x % N_THREADS;
+    const int lane   = threadIdx.x % N_THREADS;
+    const int stride = src.template stride<axis>();
 
+    coord<> base     = idx.template unit_coord<axis,3>(); // take tile-level coord passed into load and create 3d coord. Axis is the dim we treat as contiguous
+    auto*   gptr0    = &src[base];                        // global memory pointer to the start of the tile in DRAM
+    uint32_t lds0    = reinterpret_cast<uintptr_t>(&dst.data[0]); // where we will write the tile in LDS
+
+    // Queue global loads
     #pragma unroll
-    for(int i = 0; i < total_calls; i++) {
-        int load_idx = i * N_THREADS + laneid;
-        int row = load_idx / memcpy_per_row;
-        int col = (load_idx*elem_per_memcpy) % dst.cols;
+    for (int i = 0; i < VEC_PER_THD; ++i) {
+        int vec = i * N_THREADS + lane;          // flat vector index
+        if (vec >= TOTAL_VEC) break;
+        int r   = vec / VEC_PER_ROW;
+        int c   = (vec % VEC_PER_ROW) * ELEM_PER_VEC;
 
-        // if (row < dst.rows) 
-        //     *(float4*)(&dst[{row, col}]) = *(float4*)&src_ptr[row * row_stride + col];
-        
-        if (row < dst.rows)
-            global_to_shared_b128(dst.idx(dst_ptr, {row, col}), (float4*)&src_ptr[row * row_stride + col]); 
+        buf[i]  = load_global_vec(reinterpret_cast<const float4*>(gptr0 + r*stride + c));
+        ofs[i]  = dst.idx(lds0, {r, c}); 
+    }
+
+    // One waitcnt + m0 per warp (SA: maybe need sync here?)
+    __syncthreads(); // ensure all threads have loaded their data
+    asm volatile("s_waitcnt vmcnt(0)"); 
+    asm volatile("s_mov_b32 m0, 0"); 
+    
+
+    // commit VGPRs to LDS
+    #pragma unroll
+    for (int i = 0; i < VEC_PER_THD; ++i) {
+        int vec = i * N_THREADS + lane;
+        if (vec >= TOTAL_VEC) break;
+        store_shared_vec(ofs[i], buf[i]);
     }
 }
 template<ducks::st::all ST, ducks::gl::all GL, ducks::coord::tile COORD=coord<ST>>
