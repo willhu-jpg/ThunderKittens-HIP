@@ -10,17 +10,13 @@
 
 namespace kittens {
 
-
 __device__ inline float4 load_global_vec(const float4* gptr) {
     float4 v;
-    uintptr_t p  = reinterpret_cast<uintptr_t>(gptr);
-    uint32_t lo  = static_cast<uint32_t>(p);
-    uint32_t hi  = static_cast<uint32_t>(p >> 32);
-
+    // Use global_load_dwordx4 which is more cache-friendly than flat_load
     asm volatile(
-        "flat_load_dwordx4 %0, [%1, %2]\n"
+        "global_load_dwordx4 %0, %1, off\n"
         : "=v"(v) 
-        : "s"(lo), "s"(hi) 
+        : "v"(gptr)
         : "memory"
     );
     return v;   
