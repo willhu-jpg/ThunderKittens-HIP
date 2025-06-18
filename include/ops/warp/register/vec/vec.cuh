@@ -7,4 +7,4 @@
 
 // #include "conversions.cuh"
 #include "maps.cuh"
-// #include "reductions.cuh"
+#include "reductions.cuh"
