@@ -25,10 +25,6 @@ __device__ inline float2 load_shared_vec(uint32_t lds_off) {
     return result;
 }
 
-// These probably need to be redone to reduce bank conflicts.
-// They currently work fine with xor layout but it should be
-// possible to reduce their bank conflicts with other layouts too.
-
 /**
  * @brief Load data from a shared tile into a register tile.
  *
@@ -50,32 +46,34 @@ __device__ inline static void load(RT &dst, const ST &src) {
 
     int laneid = kittens::laneid();
     uint32_t src_ptr = reinterpret_cast<uintptr_t>(&src.data[0]);
-    // printf("laneid: %d\n", laneid);
     int row_offset, col_offset;
     if constexpr (std::is_same_v<typename RT::layout, ducks::rt_layout::row>) {
         row_offset = laneid%16;
         col_offset = 4*(laneid/16);
-    }
-    else {
-        row_offset = 4*(laneid/16);
-        col_offset = laneid%16;
-    }
-    // printf("(dst.height, dst.width): (%d, %d)\n", dst.height, dst.width);
-    #pragma unroll
-    for(int i = 0; i < dst.height; i++) {
-        const int row = i*dst.tile_size_row + row_offset;
+
         #pragma unroll
-        for(int j = 0; j < dst.width; j++) {
-            const int col = j*dst.tile_size_col + col_offset;
-            // printf("dst.tile_size_col: %d\n", dst.tile_size_col);
-            // printf("(row, col): (%d, %d)\n", row, col);
-            if constexpr (std::is_same_v<typename RT::layout, ducks::rt_layout::row>) { // handle the row-major layout
+        for(int i = 0; i < dst.height; i++) {
+            const int row = i*dst.tile_size_row + row_offset;
+            #pragma unroll
+            for(int j = 0; j < dst.width; j++) {
+                const int col = j*dst.tile_size_col + col_offset;
                 float2 loaded = load_shared_vec(src.idx(src_ptr, {row, col}));
                 U2* tmp = reinterpret_cast<U2*>(&loaded);
                 dst.tiles[i][j].data[0] = base_types::convertor<T2, U2>::convert(tmp[0]);
                 dst.tiles[i][j].data[1] = base_types::convertor<T2, U2>::convert(tmp[1]);
             }
-            else { // handle the column-major layout
+        }
+    }
+    else {
+        row_offset = 4*(laneid/16);
+        col_offset = laneid%16;
+
+        #pragma unroll
+        for(int i = 0; i < dst.height; i++) {
+            const int row = i*dst.tile_size_row + row_offset;
+            #pragma unroll
+            for(int j = 0; j < dst.width; j++) {
+                const int col = j*dst.tile_size_col + col_offset;
                 dst.tiles[i][j].data[0] = base_types::convertor<T2, U2>::convert(U2{src[{row, col}], src[{row+1, col}]});
                 dst.tiles[i][j].data[1] = base_types::convertor<T2, U2>::convert(U2{src[{row+2, col}], src[{row+3, col}]});
             }
