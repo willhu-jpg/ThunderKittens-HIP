@@ -17,7 +17,7 @@ __device__ inline float2 load_shared_vec(uint32_t lds_off) {
     float2 result;
     asm volatile(
         "ds_read_b64 %0, %1\n"
-        // "s_waitcnt lgkmcnt(0)\n"    // wait for the LDS to be ready (WH: serialized, should optimize)
+        "s_waitcnt lgkmcnt(0)\n"
         : "=v"(result)              // Output: store result in float2
         : "v"(lds_off)              // Input: LDS offset to read from
         : "memory"
@@ -48,8 +48,9 @@ __device__ inline static void load(RT &dst, const ST &src) {
     using U  = ST::dtype;
     using U2 = base_types::packing<U >::packed_type;
 
-    int laneid = kittens::laneid();
-    uint32_t src_ptr = reinterpret_cast<uintptr_t>(&src.data[0]);
+    const int laneid = kittens::laneid();
+    const uint32_t src_ptr = reinterpret_cast<uintptr_t>(&src.data[0]);
+
     // printf("laneid: %d\n", laneid);
     int row_offset, col_offset;
     if constexpr (std::is_same_v<typename RT::layout, ducks::rt_layout::row>) {
@@ -70,10 +71,20 @@ __device__ inline static void load(RT &dst, const ST &src) {
             // printf("dst.tile_size_col: %d\n", dst.tile_size_col);
             // printf("(row, col): (%d, %d)\n", row, col);
             if constexpr (std::is_same_v<typename RT::layout, ducks::rt_layout::row>) { // handle the row-major layout
-                float2 loaded = load_shared_vec(src.idx(src_ptr, {row, col}));
-                U2* tmp = reinterpret_cast<U2*>(&loaded);
-                dst.tiles[i][j].data[0] = base_types::convertor<T2, U2>::convert(tmp[0]);
-                dst.tiles[i][j].data[1] = base_types::convertor<T2, U2>::convert(tmp[1]);
+
+                if constexpr (sizeof(typename ST::dtype) == 4) {
+                    // handle float32
+                    float2 loaded0 = load_shared_vec(src.idx(src_ptr, {row, col}));
+                    float2 loaded1 = load_shared_vec(src.idx(src_ptr, {row, col+2}));
+                    dst.tiles[i][j].data[0] = base_types::convertor<T2, U2>::convert(loaded0);
+                    dst.tiles[i][j].data[1] = base_types::convertor<T2, U2>::convert(loaded1);
+                } else {
+                    // handle fp16 and bf16
+                    float2 loaded = load_shared_vec(src.idx(src_ptr, {row, col}));
+                    U2* tmp = reinterpret_cast<U2*>(&loaded);
+                    dst.tiles[i][j].data[0] = base_types::convertor<T2, U2>::convert(tmp[0]);
+                    dst.tiles[i][j].data[1] = base_types::convertor<T2, U2>::convert(tmp[1]);
+                }
             }
             else { // handle the column-major layout
                 dst.tiles[i][j].data[0] = base_types::convertor<T2, U2>::convert(U2{src[{row, col}], src[{row+1, col}]});
@@ -81,7 +92,6 @@ __device__ inline static void load(RT &dst, const ST &src) {
             }
         }
     }
-    asm volatile("s_waitcnt lgkmcnt(0)");
 }
 
 

@@ -64,17 +64,15 @@ __device__ inline void load(ST& dst, const GL& src, const COORD& idx)
 
     // TODO: This is a hack to avoid the issue of too many VGPRs.
     // We should find a better way to do this.
-    // const int small_calls = 16;
-    // const int big_calls = (total_calls + small_calls - 1) / small_calls;
-    float4    buf[total_calls];
+    const int small_calls = 16;
+    const int big_calls = (total_calls + small_calls - 1) / small_calls;
+    float4    buf[small_calls];
 
-    // TODO: This is a hack to avoid the issue of too many VGPRs.
-    // We should find a better way to do this.
-    // for (int i = 0; i < big_calls; i++) {
-    //     const int offset = i * small_calls;
+    for (int i = 0; i < big_calls; i++) {
+        const int offset = i * small_calls;
         #pragma unroll
-        for(int j = 0; j < total_calls; j++) {
-            int load_idx = j * N_THREADS + laneid;
+        for(int j = 0; j < small_calls; j++) {
+            int load_idx = (offset + j) * N_THREADS + laneid;
             int row = load_idx / memcpy_per_row;
             int col = (load_idx % memcpy_per_row) * elem_per_memcpy;
 
@@ -86,8 +84,8 @@ __device__ inline void load(ST& dst, const GL& src, const COORD& idx)
         asm volatile("s_waitcnt vmcnt(0)"); 
 
         #pragma unroll
-        for(int j = 0; j < total_calls; j++) {
-            int load_idx = j * N_THREADS + laneid;
+        for(int j = 0; j < small_calls; j++) {
+            int load_idx = (offset + j) * N_THREADS + laneid;
             int row = load_idx / memcpy_per_row;
             int col = (load_idx % memcpy_per_row) * elem_per_memcpy;
 
@@ -97,7 +95,7 @@ __device__ inline void load(ST& dst, const GL& src, const COORD& idx)
             }
         }
         asm volatile("s_waitcnt lgkmcnt(0)");
-    // } 
+    } 
 }
 
 // template< int  axis, bool assume_aligned,
