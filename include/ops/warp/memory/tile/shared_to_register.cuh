@@ -17,7 +17,7 @@ __device__ inline float2 load_shared_vec(uint32_t lds_off) {
     float2 result;
     asm volatile(
         "ds_read_b64 %0, %1\n"
-        "s_waitcnt lgkmcnt(0)\n"    // wait for the LDS to be ready (WH: serialized, should optimize)
+        // "s_waitcnt lgkmcnt(0)\n"    // wait for the LDS to be ready (WH: serialized, should optimize)
         : "=v"(result)              // Output: store result in float2
         : "v"(lds_off)              // Input: LDS offset to read from
         : "memory"
@@ -81,6 +81,7 @@ __device__ inline static void load(RT &dst, const ST &src) {
             }
         }
     }
+    asm volatile("s_waitcnt lgkmcnt(0)");
 }
 
 
