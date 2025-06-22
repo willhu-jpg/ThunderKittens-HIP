@@ -9,28 +9,6 @@
 #include "../../../../types/types.cuh"
 
 namespace kittens {
-
-__device__ inline float4 load_global_vec(const float4* gptr) {
-    float4 v;
-    // Use global_load_dwordx4 which is more cache-friendly than flat_load
-    asm volatile(
-        "global_load_dwordx4 %0, %1, off\n"
-        : "=v"(v) 
-        : "v"(gptr)
-        : "memory"
-    );
-    return v;   
-}
-
-__device__ inline void store_shared_vec(uint32_t lds_off, float2 val) {
-    asm volatile(
-        "ds_write_b64 %0, %1\n"
-        :
-        : "v"(lds_off), "v"(val)
-        : "memory"
-    );
-}
-
 // Store function using ds_write_b128 - proper float handling
 // __device__ inline void store_shared_vec(uint32_t lds_off, float4 val) {
 //     float *f = reinterpret_cast<float*>(&val);
@@ -77,7 +55,7 @@ __device__ inline void load(ST& dst, const GL& src, const COORD& idx)
             int col = (load_idx % memcpy_per_row) * elem_per_memcpy;
 
             if (row < dst.rows) {
-                buf[j] = load_global_vec((float4*) (src_ptr + (row * row_stride + col)));
+                buf[j] = load_global_vec4_async((float4*) (src_ptr + (row * row_stride + col)));
             }
         }
 
