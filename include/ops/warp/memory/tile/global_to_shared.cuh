@@ -9,28 +9,6 @@
 #include "../../../../types/types.cuh"
 
 namespace kittens {
-
-__device__ inline float4 load_global_vec(const float4* gptr) {
-    float4 v;
-    // Use global_load_dwordx4 which is more cache-friendly than flat_load
-    asm volatile(
-        "global_load_dwordx4 %0, %1, off\n"
-        : "=v"(v) 
-        : "v"(gptr)
-        : "memory"
-    );
-    return v;   
-}
-
-__device__ inline void store_shared_vec(uint32_t lds_off, float2 val) {
-    asm volatile(
-        "ds_write_b64 %0, %1\n"
-        :
-        : "v"(lds_off), "v"(val)
-        : "memory"
-    );
-}
-
 // Store function using ds_write_b128 - proper float handling
 // __device__ inline void store_shared_vec(uint32_t lds_off, float4 val) {
 //     float *f = reinterpret_cast<float*>(&val);
@@ -64,30 +42,28 @@ __device__ inline void load(ST& dst, const GL& src, const COORD& idx)
 
     // TODO: This is a hack to avoid the issue of too many VGPRs.
     // We should find a better way to do this.
-    // const int small_calls = 16;
-    // const int big_calls = (total_calls + small_calls - 1) / small_calls;
-    float4    buf[total_calls];
+    const int small_calls = 16;
+    const int big_calls = (total_calls + small_calls - 1) / small_calls;
+    float4    buf[small_calls];
 
-    // TODO: This is a hack to avoid the issue of too many VGPRs.
-    // We should find a better way to do this.
-    // for (int i = 0; i < big_calls; i++) {
-    //     const int offset = i * small_calls;
+    for (int i = 0; i < big_calls; i++) {
+        const int offset = i * small_calls;
         #pragma unroll
-        for(int j = 0; j < total_calls; j++) {
-            int load_idx = j * N_THREADS + laneid;
+        for(int j = 0; j < small_calls; j++) {
+            int load_idx = (offset + j) * N_THREADS + laneid;
             int row = load_idx / memcpy_per_row;
             int col = (load_idx % memcpy_per_row) * elem_per_memcpy;
 
             if (row < dst.rows) {
-                buf[j] = load_global_vec((float4*) (src_ptr + (row * row_stride + col)));
+                buf[j] = load_global_vec4_async((float4*) (src_ptr + (row * row_stride + col)));
             }
         }
 
         asm volatile("s_waitcnt vmcnt(0)"); 
 
         #pragma unroll
-        for(int j = 0; j < total_calls; j++) {
-            int load_idx = j * N_THREADS + laneid;
+        for(int j = 0; j < small_calls; j++) {
+            int load_idx = (offset + j) * N_THREADS + laneid;
             int row = load_idx / memcpy_per_row;
             int col = (load_idx % memcpy_per_row) * elem_per_memcpy;
 
@@ -97,7 +73,7 @@ __device__ inline void load(ST& dst, const GL& src, const COORD& idx)
             }
         }
         asm volatile("s_waitcnt lgkmcnt(0)");
-    // } 
+    } 
 }
 
 // template< int  axis, bool assume_aligned,
