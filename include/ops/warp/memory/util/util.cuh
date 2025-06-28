@@ -58,6 +58,22 @@ __device__ inline float4 load_global_vec4(const float4* gptr) {
     return v;   
 }
 
+using i32x4 = int32_t __attribute__((ext_vector_type(4)));
+struct buffer_resource {
+    const void* ptr;
+    uint32_t range;
+    uint32_t config;
+};
+__device__ inline buffer_resource make_buffer_resource(const void* ptr, uint32_t range, uint32_t config) {
+    return {ptr, range, config};
+}
+__device__ uint64_t llvm_amdgcn_raw_buffer_load_b64(i32x4 srsrc, uint32_t voffset, uint32_t soffset, uint32_t coherency)
+    __asm("llvm.amdgcn.raw.buffer.load.i64");
+
+__device__ __uint128_t llvm_amdgcn_raw_buffer_load_b128(i32x4 srsrc, uint32_t voffset, uint32_t soffset, uint32_t coherency)
+    __asm("llvm.amdgcn.raw.buffer.load.i128");
+
+
 __device__ inline float2 load_global_vec2_async(const float2* gptr) {
     float2 v;
     // Use global_load_dwordx2 which is more cache-friendly than flat_load
