@@ -18,6 +18,39 @@ namespace kittens {
  * @param src[in] The source array to load data from.
  * @param row_stride[in] The stride in elements between rows in the source array.
  */
+// template<int axis, ducks::rt::row_layout RT, ducks::gl::all GL, ducks::coord::tile COORD=coord<RT>>
+// __device__ inline static void load(RT &dst, const GL &src, const COORD &idx) {
+//     using T2 = RT::dtype;
+//     using U = typename GL::dtype;
+//     using U2 = base_types::packing<U>::packed_type;
+
+//     U *src_ptr = (U*)&src[(idx.template unit_coord<axis, 3>())];
+//     const int row_stride = src.template stride<axis>();
+//     int laneid = kittens::laneid();
+//     int row_offset = laneid%16, col_offset = 4*(laneid/16);
+
+//     #pragma unroll
+//     for(int i = 0; i < dst.height; i++) {
+//         int row = dst.tile_size_row*i + row_offset;
+//         #pragma unroll
+//         for(int j = 0; j < dst.width; j++) {
+//             int col = dst.tile_size_col*j + col_offset;
+//             U2* tmp;
+//             if constexpr (sizeof(U2) == 4) { // bf16_2
+//                 float2 loaded = load_global_vec2((float2*) (src_ptr + (row*row_stride + col)));
+//                 tmp = reinterpret_cast<U2*>(&loaded);
+//             }
+//             else { // float2
+//                 float4 loaded = load_global_vec4((float4*) (src_ptr + (row*row_stride + col)));
+//                 tmp = reinterpret_cast<U2*>(&loaded);
+//             }
+//             #pragma unroll
+//             for(int k = 0; k < 2; k++) {
+//                 dst.tiles[i][j].data[k] = base_types::convertor<T2, U2>::convert(tmp[k]);
+//             }
+//         }
+//     }
+// }
 template<int axis, ducks::rt::row_layout RT, ducks::gl::all GL, ducks::coord::tile COORD=coord<RT>>
 __device__ inline static void load(RT &dst, const GL &src, const COORD &idx) {
     using T2 = RT::dtype;
@@ -29,6 +62,9 @@ __device__ inline static void load(RT &dst, const GL &src, const COORD &idx) {
     int laneid = kittens::laneid();
     int row_offset = laneid%16, col_offset = 4*(laneid/16);
 
+    uint32_t buffer_size = src.batch * src.depth * src.rows * src.cols * sizeof(U);
+    buffer_resource br = make_buffer_resource(src_ptr, buffer_size, 0x00020000);
+
     #pragma unroll
     for(int i = 0; i < dst.height; i++) {
         int row = dst.tile_size_row*i + row_offset;
@@ -37,11 +73,21 @@ __device__ inline static void load(RT &dst, const GL &src, const COORD &idx) {
             int col = dst.tile_size_col*j + col_offset;
             U2* tmp;
             if constexpr (sizeof(U2) == 4) { // bf16_2
-                float2 loaded = load_global_vec2((float2*) (src_ptr + (row*row_stride + col)));
+                float2 loaded = std::bit_cast<float2>(llvm_amdgcn_raw_buffer_load_b64(
+                    std::bit_cast<i32x4>(br),
+                    (row*row_stride + col) * sizeof(U),
+                    0,
+                    0
+                ));
                 tmp = reinterpret_cast<U2*>(&loaded);
             }
             else { // float2
-                float4 loaded = load_global_vec4((float4*) (src_ptr + (row*row_stride + col)));
+                float4 loaded = std::bit_cast<float4>(llvm_amdgcn_raw_buffer_load_b128(
+                    std::bit_cast<i32x4>(br),
+                    (row*row_stride + col) * sizeof(U),
+                    0,
+                    0
+                ));
                 tmp = reinterpret_cast<U2*>(&loaded);
             }
             #pragma unroll
