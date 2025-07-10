@@ -222,9 +222,19 @@ template<> struct convertor<float, bf16> {
         return 	__bfloat162float(u);
     }
 };
+// template<> struct convertor<bf16, float> {
+//     static __host__ __device__ inline bf16 convert(const float & u) {
+//         return 	__float2bfloat16(u);
+//     }
+// };
 template<> struct convertor<bf16, float> {
-    static __host__ __device__ inline bf16 convert(const float & u) {
-        return 	__float2bfloat16(u);
+    static __host__ __device__ inline bf16 convert(const float &u) {
+        // Fast unsafe conversion (truncation only)
+        return std::bit_cast<bf16>(
+            static_cast<uint16_t>(
+                std::bit_cast<uint32_t>(u) >> 16
+            )
+        );
     }
 };
 template<> struct convertor<float2, bf16_2> {
@@ -232,9 +242,18 @@ template<> struct convertor<float2, bf16_2> {
         return 	__bfloat1622float2(u);
     }
 };
-template<> struct convertor<bf16_2, float2> {
-    static __host__ __device__ inline bf16_2 convert(const float2 & u) {
-        return 	__float22bfloat162_rn(u);
+// template<> struct convertor<bf16_2, float2> {
+//     static __host__ __device__ inline bf16_2 convert(const float2 & u) {
+//         return 	__float22bfloat162_rn(u);
+//     }
+// };
+template<>
+struct convertor<bf16_2, float2> {
+    static __host__ __device__ inline bf16_2 convert(const float2 &u) {
+        return bf16_2{
+            std::bit_cast<bf16>(static_cast<uint16_t>(std::bit_cast<uint32_t>(u.x) >> 16)),
+            std::bit_cast<bf16>(static_cast<uint16_t>(std::bit_cast<uint32_t>(u.y) >> 16))
+        };
     }
 };
 template<> struct convertor<float, half> {
