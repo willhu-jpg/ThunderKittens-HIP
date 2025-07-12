@@ -21,7 +21,7 @@ __device__ inline static void load(RT &dst, const GL &src, const COORD &idx) {
     int laneid = kittens::laneid();
     int row_offset = laneid%16, col_offset = 4*(laneid/16);
 
-    uint32_t buffer_size = src.batch * src.depth * src.rows * src.cols * sizeof(U);
+    uint32_t buffer_size = src.batch() * src.depth() * src.rows() * src.cols() * sizeof(U);
     buffer_resource br = make_buffer_resource(src_ptr, buffer_size, 0x00020000);
 
     #pragma unroll
