@@ -60,11 +60,11 @@ __device__ inline float4 load_global_vec4(const float4* gptr) {
 
 using i32x4 = int32_t __attribute__((ext_vector_type(4)));
 struct buffer_resource {
-    const void* ptr;
+    uint64_t ptr;
     uint32_t range;
     uint32_t config;
 };
-__device__ inline buffer_resource make_buffer_resource(const void* ptr, uint32_t range, uint32_t config) {
+__device__ inline buffer_resource make_buffer_resource(uint64_t ptr, uint32_t range, uint32_t config) {
     return {ptr, range, config};
 }
 __device__ uint64_t llvm_amdgcn_raw_buffer_load_b64(i32x4 srsrc, uint32_t voffset, uint32_t soffset, uint32_t coherency)
