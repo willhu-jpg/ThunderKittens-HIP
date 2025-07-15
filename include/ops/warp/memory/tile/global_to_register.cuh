@@ -7,8 +7,43 @@
 
 #include "../../../../common/common.cuh"
 #include "../../../../types/types.cuh"
+#include "../util/util.cuh"
 
 namespace kittens {
+
+
+using v2u32 = uint32_t __attribute__((ext_vector_type(2)));
+
+__device__ inline uint16_t to_bf16(float x) {
+    return static_cast<uint16_t>(__float_as_uint(x) >> 16);
+}
+
+__device__ inline uint32_t pack_bf16x2(float a, float b) {
+    return (static_cast<uint32_t>(to_bf16(b)) << 16) | to_bf16(a);
+}
+
+__device__ void llvm_amdgcn_raw_buffer_store_b64(
+    v2u32 vdata, i32x4 srsrc, uint32_t voffset, uint32_t soffset, uint32_t coherency)
+    __asm("llvm.amdgcn.raw.buffer.store.i64");
+
+__device__ inline i32x4 make_srsrc(const void* ptr, uint32_t range_bytes, uint32_t row_stride_bytes = 0) {
+    std::uintptr_t as_int = reinterpret_cast<std::uintptr_t>(ptr);   // width = sizeof(void*)
+    std::uint64_t  as_u64 = static_cast<std::uint64_t>(as_int);    // widen if host is 32-bit
+    buffer_resource rsrc = make_buffer_resource(as_u64, range_bytes, 0x110000);
+
+    row_stride_bytes &= 0x3FFF;
+    if (row_stride_bytes) {
+        // - The swizzle stride lives in bits 13:0 of word2.
+        //   Max value = 0x3FFF (8 KiB – one cache line per bank).
+        uint64_t stride_field = row_stride_bytes;
+        stride_field = stride_field | 0x4000;         // Cache swizzle
+        stride_field = stride_field | 0x8000;         // Swizzle enable
+        rsrc.ptr |= stride_field << 48;
+    }
+
+    return *reinterpret_cast<const i32x4*>(&rsrc);
+}
+
 
 template<int axis, ducks::rt::row_layout RT, ducks::gl::all GL, ducks::coord::tile COORD=coord<RT>>
 __device__ inline static void load(RT &dst, const GL &src, const COORD &idx) {
@@ -22,7 +57,10 @@ __device__ inline static void load(RT &dst, const GL &src, const COORD &idx) {
     int row_offset = laneid%16, col_offset = 4*(laneid/16);
 
     uint32_t buffer_size = src.batch() * src.depth() * src.rows() * src.cols() * sizeof(U);
-    buffer_resource br = make_buffer_resource(src_ptr, buffer_size, 0x00020000);
+
+    std::uintptr_t as_int = reinterpret_cast<std::uintptr_t>(src_ptr);
+    std::uint64_t  as_u64 = static_cast<std::uint64_t>(as_int);    // widen if host is 32-bit
+    buffer_resource br = make_buffer_resource(as_u64, buffer_size, 0x00020000);
 
     #pragma unroll
     for(int i = 0; i < dst.height; i++) {
@@ -133,38 +171,6 @@ __device__ inline static void store(const GL &dst, const RT &src, const COORD &i
             }
         }
     }
-}
-
-using v2u32 = uint32_t __attribute__((ext_vector_type(2)));
-
-__device__ inline uint16_t to_bf16(float x) {
-    return static_cast<uint16_t>(__float_as_uint(x) >> 16);
-}
-
-__device__ inline uint32_t pack_bf16x2(float a, float b) {
-    return (static_cast<uint32_t>(to_bf16(b)) << 16) | to_bf16(a);
-}
-
-__device__ void llvm_amdgcn_raw_buffer_store_b64(
-    v2u32 vdata, i32x4 srsrc, uint32_t voffset, uint32_t soffset, uint32_t coherency)
-    __asm("llvm.amdgcn.raw.buffer.store.i64");
-
-__device__ inline i32x4 make_srsrc(const void* ptr, uint32_t range_bytes, uint32_t row_stride_bytes = 0) {
-    std::uintptr_t as_int = reinterpret_cast<std::uintptr_t>(ptr);   // width = sizeof(void*)
-    std::uint64_t  as_u64 = static_cast<std::uint64_t>(as_int);    // widen if host is 32-bit
-    buffer_resource rsrc = make_buffer_resource(as_u64, range_bytes, 0x110000);
-
-    row_stride_bytes &= 0x3FFF;
-    if (row_stride_bytes) {
-        // - The swizzle stride lives in bits 13:0 of word2.
-        //   Max value = 0x3FFF (8 KiB – one cache line per bank).
-        uint64_t stride_field = row_stride_bytes;
-        stride_field = stride_field | 0x4000;         // Cache swizzle
-        stride_field = stride_field | 0x8000;         // Swizzle enable
-        rsrc.ptr |= stride_field << 48;
-    }
-
-    return *reinterpret_cast<const i32x4*>(&rsrc);
 }
 
 // template<int axis, ducks::rt::row_layout RT, ducks::gl::all GL, ducks::coord::tile COORD=coord<RT>>

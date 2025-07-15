@@ -67,8 +67,13 @@ __device__ __forceinline__ int warpgroupid() { return threadIdx.x >> 8; }
  */
 __device__ __forceinline__ int laneid() { return threadIdx.x & 0x3f; }
 
-
+#if defined(KITTENS_CDNA2)
 constexpr int MAX_SHARED_MEMORY = 65536; 
+#elif defined(KITTENS_CDNA3)
+constexpr int MAX_SHARED_MEMORY = 65536;
+#else
+constexpr int MAX_SHARED_MEMORY = 160000;
+#endif
 
 /* ----------  TYPE HELPERS  ---------- */
 
