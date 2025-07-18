@@ -10,6 +10,42 @@
 
 namespace kittens {
 
+
+#ifdef KITTENS_CDNA4
+
+__device__ static inline void mfma161616(      float2 (&D)[4],
+                                         const bf16_2 (&A)[4],
+                                         const bf16_2 (&B)[4],
+                                         const float2 (&C)[4]) {
+    // Cast to the correct vector types that the intrinsic expects
+    typedef __attribute__((__vector_size__(8 * sizeof(__bf16)))) __bf16 bf16x8_t;
+    typedef __attribute__((__vector_size__(16 * sizeof(float)))) float floatx16_t;
+    
+    *(floatx16_t*)D = __builtin_amdgcn_mfma_f32_32x32x16_bf16(
+        *(bf16x8_t*)A,
+        *(bf16x8_t*)B,
+        *(floatx16_t*)C,
+        0, 0, 0
+    );
+}
+
+__device__ static inline void mfma161616(      float2 (&D)[4],
+                                         const half_2 (&A)[4],
+                                         const half_2 (&B)[4],
+                                         const float2 (&C)[4]) {
+    // Cast to the correct vector types that the intrinsic expects
+    typedef __attribute__((__vector_size__(8 * sizeof(__fp16)))) __fp16 fp16x8_t;
+    typedef __attribute__((__vector_size__(16 * sizeof(float)))) float floatx16_t;
+    
+    *(floatx16_t*)D = __builtin_amdgcn_mfma_f32_32x32x16_f16(
+        *(fp16x8_t*)A,
+        *(fp16x8_t*)B,
+        *(floatx16_t*)C,
+        0, 0, 0
+    );
+}
+#else
+
 __device__ static inline void mfma161616(      float2 (&D)[2],
                                          const half_2 (&A)[2],
                                          const half_2 (&B)[2],
@@ -33,6 +69,8 @@ __device__ static inline void mfma161616(      float2 (&D)[2],
         0, 0, 0
     )};
 }
+#endif
+
 
 /**
  * @brief Base matrix multiply-accumulate operation for row layout.

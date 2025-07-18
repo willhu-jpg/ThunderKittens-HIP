@@ -24,13 +24,7 @@ __device__ static inline int laneid() { return threadIdx.x % GROUP_THREADS; }
 __device__ static inline int warpid() { return laneid() / kittens::WARP_THREADS; }
 __device__ static inline int groupid() { return threadIdx.x / GROUP_THREADS; }
 
-__device__ static inline void sync(int id) { // backup: specify the barrier ID manually
-    asm volatile("bar.sync %0, %1;\n" :: "r"(id), "n"(GROUP_THREADS));
-}
-
 #include "memory/memory.cuh"
-// #include "shared/shared.cuh"
-
 };
 
 using warpgroup = group<4>; // special scope commonly used by SM_90 and later.

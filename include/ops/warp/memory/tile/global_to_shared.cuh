@@ -19,9 +19,9 @@ __device__ inline void load(ST& dst, const GL& src, const COORD& idx)
     using T = typename ST::dtype;
     const int row_stride = src.template stride<axis>();
     // we can handle this many rows each time we run a memcpy_async
-    constexpr int elem_per_memcpy = sizeof(float4)/sizeof(typename ST::dtype);
-    constexpr int elem_per_half_memcpy = sizeof(float2)/sizeof(typename ST::dtype);
-    constexpr int memcpy_per_row = ST::cols / elem_per_memcpy;
+    constexpr int elem_per_memcpy = sizeof(float4)/sizeof(typename ST::dtype); // if bf16, then 16/2 = 8 
+    constexpr int elem_per_half_memcpy = sizeof(float2)/sizeof(typename ST::dtype); // if bf16, then 8/2 = 4
+    constexpr int memcpy_per_row = ST::cols / elem_per_memcpy; // if 64 columns, then 64/8 = 8
     constexpr int total_calls = (ST::cols * ST::rows + N_THREADS*elem_per_memcpy-1) / (N_THREADS*elem_per_memcpy); // round up
 
     coord<> unit_coord = idx.template unit_coord<axis, 3>();
@@ -45,11 +45,15 @@ __device__ inline void load(ST& dst, const GL& src, const COORD& idx)
             int col = (load_idx % memcpy_per_row) * elem_per_memcpy;
 
             if (row < dst.rows) {
-                buf[j] = load_global_vec4_async((float4*) (src_ptr + (row * row_stride + col)));
+                buf[j] = load_global_vec4_async((float4*) (src_ptr + (row * row_stride + col))); // thread loads 128-bits, 16-bytes
             }
         }
 
+        #ifdef BUILTINS_ONLY
+        __builtin_amdgcn_s_waitcnt(0);
+        #else
         asm volatile("s_waitcnt vmcnt(0)"); 
+        #endif
 
         #pragma unroll
         for(int j = 0; j < small_calls; j++) {
@@ -62,7 +66,12 @@ __device__ inline void load(ST& dst, const GL& src, const COORD& idx)
                 store_shared_vec(dst.idx(dst_ptr, {row, col + elem_per_half_memcpy}), {buf[j].z, buf[j].w});
             }
         }
+
+        #ifdef BUILTINS_ONLY
+        __builtin_amdgcn_s_waitcnt(0);
+        #else
         asm volatile("s_waitcnt lgkmcnt(0)");
+        #endif
     } 
 }
 
@@ -99,9 +108,7 @@ __device__ static inline void store(const GL &dst, const ST &src, const COORD &i
     for(int i = 0; i < total_calls; i++) {
 
         int load_idx = i * N_THREADS + laneid;
-        
         int row = load_idx / memcpy_per_row;
-
         int col = (load_idx*elem_per_memcpy) % src.cols;
 
         if (row < src.rows) {
