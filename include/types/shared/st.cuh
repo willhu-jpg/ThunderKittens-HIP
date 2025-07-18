@@ -101,11 +101,11 @@ struct KITTENS_DEFAULT_ALIGN st {
         int r = coord.x, c = coord.y; // alias
 
         #ifdef KITTENS_CDNA4
-        static constexpr int swizzle_repeat = swizzle_bytes << 3;
+        static constexpr int swizzle_repeat = swizzle_bytes << 4;
         static constexpr int subtile_cols   = swizzle_bytes / sizeof(T);
         const int outer_idx = c/subtile_cols;
         const uint64_t addr = (uint64_t)(&ptr[outer_idx*rows*subtile_cols + r*subtile_cols + c%subtile_cols]);
-        const int swizzle = ((addr % swizzle_repeat) >> 7) << 4;
+        const int swizzle = ((addr % swizzle_repeat) >> 8) << 4;
         #else
         static constexpr int swizzle_repeat = swizzle_bytes << 4;
         static constexpr int subtile_cols   = swizzle_bytes / sizeof(T);
@@ -220,7 +220,7 @@ struct st_subtile {
         static constexpr int subtile_cols   = swizzle_bytes / sizeof(T);
         const int outer_idx = c/subtile_cols;
         const uint64_t addr = (uint64_t)(&ptr[outer_idx*underlying_rows*subtile_cols + r*subtile_cols + c%subtile_cols]);
-        const int swizzle = ((addr % swizzle_repeat) >> 7) << 4;
+        const int swizzle = ((addr % swizzle_repeat) >> 8) << 4;
         #else
         static constexpr int swizzle_repeat = swizzle_bytes << 4;
         static constexpr int subtile_cols   = swizzle_bytes / sizeof(T);
@@ -235,11 +235,11 @@ struct st_subtile {
         int r = coord.x+row_offset, c = coord.y+col_offset; // alias
 
         #ifdef KITTENS_CDNA4
-        static constexpr int swizzle_repeat = swizzle_bytes << 3;
+        static constexpr int swizzle_repeat = swizzle_bytes << 4;
         static constexpr int subtile_cols   = swizzle_bytes / sizeof(T);
         const int outer_idx = c/subtile_cols;
         const uint64_t addr = (uint64_t)(&ptr[outer_idx*underlying_rows*subtile_cols + r*subtile_cols + c%subtile_cols]);
-        const int swizzle = ((addr % swizzle_repeat) >> 7) << 4;
+        const int swizzle = ((addr % swizzle_repeat) >> 8) << 4;
         #else
         static constexpr int swizzle_repeat = swizzle_bytes << 4;
         static constexpr int subtile_cols   = swizzle_bytes / sizeof(T);
@@ -254,11 +254,11 @@ struct st_subtile {
         int r = coord.x+row_offset, c = coord.y+col_offset; // alias
 
         #ifdef KITTENS_CDNA4
-        static constexpr int swizzle_repeat = swizzle_bytes << 3;
+        static constexpr int swizzle_repeat = swizzle_bytes << 4;
         static constexpr int subtile_cols   = swizzle_bytes / sizeof(T);
         const int outer_idx = c/subtile_cols;
         const uint32_t addr = ptr + sizeof(T)*(outer_idx*underlying_rows*subtile_cols + r*subtile_cols + c%subtile_cols);
-        const int swizzle = ((addr % swizzle_repeat) >> 7) << 4;
+        const int swizzle = ((addr % swizzle_repeat) >> 8) << 4;
         #else
         static constexpr int swizzle_repeat = swizzle_bytes << 4;
         static constexpr int subtile_cols   = swizzle_bytes / sizeof(T);
