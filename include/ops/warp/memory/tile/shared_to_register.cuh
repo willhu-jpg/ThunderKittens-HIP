@@ -48,15 +48,12 @@ __device__ inline static void load(RT &dst, const ST &src) {
         row_offset = 4*(laneid/16);
         col_offset = laneid%16;
     }
-    // printf("(dst.height, dst.width): (%d, %d)\n", dst.height, dst.width);
     #pragma unroll
     for(int i = 0; i < dst.height; i++) {
         const int row = i*dst.tile_size_row + row_offset;
         #pragma unroll
         for(int j = 0; j < dst.width; j++) {
             const int col = j*dst.tile_size_col + col_offset;
-            // printf("dst.tile_size_col: %d\n", dst.tile_size_col);
-            // printf("(row, col): (%d, %d)\n", row, col);
             if constexpr (std::is_same_v<typename RT::layout, ducks::rt_layout::row>) { // handle the row-major layout
 
                 if constexpr (sizeof(typename ST::dtype) == 4) {

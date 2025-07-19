@@ -71,27 +71,15 @@ struct KITTENS_DEFAULT_ALIGN st {
 
     static constexpr int swizzle_bytes = (
         sizeof(dtype) == 1 ? (  // Add FP8 case
-            #ifdef KITTENS_CDNA4
-            underlying_width%2 == 0 ? 128 : 64
-            #else
             underlying_width%4 == 0 ? 128 :
             underlying_width%2 == 0 ?  64 : 32
-            #endif
         ) :
         sizeof(dtype) == 2 ? (
-            #ifdef KITTENS_CDNA4
-            underlying_width%2 == 0 ? 128 : 64
-            #else
             underlying_width%4 == 0 ? 128 :
             underlying_width%2 == 0 ?  64 : 32
-            #endif
         ) :
         sizeof(dtype) == 4 ? (
-            #ifdef KITTENS_CDNA4
-            underlying_width%2 == 128
-            #else
             underlying_width%2 == 0 ? 128 : 64
-            #endif
         ) : -1
     );
 
